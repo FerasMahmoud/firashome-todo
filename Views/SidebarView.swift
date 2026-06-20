@@ -153,12 +153,4 @@ struct SidebarView: View {
     }
 }
 
-#Preview {
-    NavigationSplitView {
-        SidebarView(selection: .constant(.today))
-    } detail: {
-        Text("Detail")
-            .foregroundStyle(TK.secondary)
-    }
-    .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}
+

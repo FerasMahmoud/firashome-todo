@@ -155,7 +155,3 @@ private struct DayBucket: Identifiable {
 
 // MARK: - Preview
 
-#Preview {
-    UpcomingView()
-        .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}

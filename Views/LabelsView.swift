@@ -258,7 +258,3 @@ private enum LabelPalette {
 
 // MARK: - Preview
 
-#Preview {
-    LabelsView()
-        .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}

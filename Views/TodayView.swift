@@ -155,7 +155,4 @@ struct TodayView: View {
     }
 }
 
-#Preview {
-    TodayView()
-        .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}
+

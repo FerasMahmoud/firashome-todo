@@ -369,37 +369,4 @@ struct TaskDetailView: View {
 
 // MARK: - Preview
 
-#Preview {
-    let container: ModelContainer = {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let c = try! ModelContainer(
-            for: TodoTask.self, Project.self, Label.self,
-            configurations: config
-        )
-        let ctx = c.mainContext
 
-        let work = Project(name: "FITech", colorHex: "246FE0", order: 0, isFavorite: true)
-        let home = Project(name: "Personal", colorHex: "E03982", order: 1)
-        ctx.insert(work)
-        ctx.insert(home)
-
-        let task = TodoTask(
-            title: "Review Q3 drone proposal with Firas",
-            note: "Sync with Firas and review margin assumptions before sending.",
-            dueDate: .now,
-            priority: 1,
-            project: work
-        )
-        ctx.insert(task)
-        try? ctx.save()
-        return c
-    }()
-
-    let previewContext = container.mainContext
-    let task = try! previewContext.fetch(FetchDescriptor<TodoTask>()).first!
-
-    NavigationStack {
-        TaskDetailView(task: task)
-    }
-    .modelContainer(container)
-}

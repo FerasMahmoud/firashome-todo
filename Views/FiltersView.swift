@@ -253,34 +253,4 @@ struct FilterResultView: View {
     }
 }
 
-#Preview {
-    let container = try! ModelContainer(
-        for: TodoTask.self, Project.self, Label.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
-    let ctx = container.mainContext
-    let cal = Calendar.current
-    let now = Date()
-    ctx.insert(TodoTask(
-        title: "Ship the iOS build",
-        priority: 1,
-        dueDate: cal.date(byAdding: .day, value: -1, to: now)
-    ))
-    ctx.insert(TodoTask(
-        title: "Review drone brief",
-        priority: 2,
-        dueDate: now
-    ))
-    ctx.insert(TodoTask(
-        title: "Plan the Q3 roadmap",
-        priority: 4,
-        dueDate: cal.date(byAdding: .day, value: 3, to: now)
-    ))
-    ctx.insert(TodoTask(
-        title: "Tidy the inbox",
-        priority: 4,
-        dueDate: nil
-    ))
-    FiltersView()
-        .modelContainer(container)
-}
+

@@ -242,31 +242,6 @@ struct ProjectsView: View {
     }
 }
 
-#Preview("Empty") {
-    NavigationStack {
-        ProjectsView()
-    }
-    .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}
 
-#Preview("With projects") {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: TodoTask.self, Project.self, Label.self,
-        configurations: config
-    )
-    let ctx = container.mainContext
-    let p1 = Project(name: "Personal", colorHex: "1F87E6", order: 0, isFavorite: true)
-    let p2 = Project(name: "Work", colorHex: "0DA34A", order: 1)
-    let p3 = Project(name: "Errands", colorHex: "E53935", order: 2)
-    ctx.insert(p1)
-    ctx.insert(p2)
-    ctx.insert(p3)
-    ctx.insert(TodoTask(title: "Buy groceries", priority: 2, project: p3))
-    ctx.insert(TodoTask(title: "Review Q3 report", priority: 1, project: p2))
-    ctx.insert(TodoTask(title: "Morning run", priority: 4, project: p1))
-    NavigationStack {
-        ProjectsView()
-    }
-    .modelContainer(container)
-}
+
+

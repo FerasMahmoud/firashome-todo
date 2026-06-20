@@ -75,13 +75,3 @@ struct TaskListView: View {
     }
 }
 
-#Preview {
-    let project = Project(name: "FITech", colorHex: "1B8B6A")
-    let sample: [TodoTask] = [
-        TodoTask(title: "Review drone brief",       priority: 1, project: project),
-        TodoTask(title: "Email Qiddiya team",       priority: 3, project: project),
-        TodoTask(title: "Walk SkyAtlas checkpoints", priority: 4)
-    ]
-    TaskListView(tasks: sample, header: "Today")
-        .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}

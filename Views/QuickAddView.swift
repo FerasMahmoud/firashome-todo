@@ -320,7 +320,3 @@ struct QuickAddView: View {
     }
 }
 
-#Preview {
-    QuickAddView()
-        .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}

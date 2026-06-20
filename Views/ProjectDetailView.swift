@@ -341,37 +341,8 @@ struct ProjectDetailView: View {
 
 // MARK: - Preview
 
-#Preview {
-    ProjectDetailView(projectID: UUID())
-        .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
-}
 
-#Preview("FITech — active and completed") {
-    let container = ProjectDetailView.previewContainer()
-    let projectID = container.mainContext
-        .fetch(FetchDescriptor<Project>())
-        .first(where: { $0.name == "FITech" })!.id
-    ProjectDetailView(projectID: projectID)
-        .modelContainer(container)
-}
 
-#Preview("Empty project") {
-    let container = ProjectDetailView.previewContainer()
-    let ctx = container.mainContext
-    // Remove every task that belongs to "Personal" so the empty-state branch
-    // renders. Filtering in memory avoids optional-chain `#Predicate` macros,
-    // which can be flaky across SDKs.
-    if let personal = ctx.fetch(FetchDescriptor<Project>())
-        .first(where: { $0.name == "Personal" })
-    {
-        let pid = personal.id
-        for t in ctx.fetch(FetchDescriptor<TodoTask>())
-        where t.project?.id == pid {
-            ctx.delete(t)
-        }
-    }
-    let projectID = ctx.fetch(FetchDescriptor<Project>())
-        .first(where: { $0.name == "Personal" })!.id
-    ProjectDetailView(projectID: projectID)
-        .modelContainer(container)
-}
+
+
+
