@@ -129,13 +129,13 @@ struct AddTaskBar: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: 11) {
                 Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 24, weight: .regular))
+                    .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(TK.accent)
                 Text("Add task")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color(red: 0.35, green: 0.35, blue: 0.37))
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(TK.secondary)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
