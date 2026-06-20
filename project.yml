@@ -7,7 +7,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "3V4NW789C6"
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     MARKETING_VERSION: "1.0"
@@ -87,7 +87,6 @@ schemes:
     build:
       targets:
         Todo: all
-        TodoWidgets: all
     run:
       config: Debug
     test:
