@@ -36,7 +36,7 @@ struct TaskListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-            .listRowBackground(TK.isDarkGlass ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(TK.canvas))
+            .listRowBackground { if TK.isDarkGlass { Rectangle().fill(.thinMaterial) } else { TK.canvas } }
         .background(TK.canvas)
     }
 

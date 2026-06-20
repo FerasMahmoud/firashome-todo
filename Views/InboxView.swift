@@ -34,7 +34,7 @@ struct InboxView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .listRowBackground(TK.isDarkGlass ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(TK.canvas))
+            .listRowBackground { if TK.isDarkGlass { Rectangle().fill(.thinMaterial) } else { TK.canvas } }
             .background { GlassPlanetBg() }
         }
     }
