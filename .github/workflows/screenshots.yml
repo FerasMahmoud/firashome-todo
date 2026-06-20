@@ -111,6 +111,8 @@ jobs:
                       for v in o: walk(v)
               if raw is not None: walk(raw)
           print("manifest entries (ordered):", ordered)
+          if os.path.exists(mani):
+              print("MANIFEST RAW:", open(mani).read()[:3000])
           if len(ordered) >= len(labels):
               for i, (fn, _) in enumerate(ordered[:len(labels)]):
                   hits = glob.glob(os.path.join(out, "**", fn), recursive=True)
