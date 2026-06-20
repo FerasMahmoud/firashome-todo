@@ -54,6 +54,7 @@ targets:
     sources:
       - path: Widgets
       - path: Shared
+      - path: Design/Tokens.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.widgets
