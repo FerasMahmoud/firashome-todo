@@ -52,8 +52,11 @@ struct RootView: View {
         }
         .colorScheme(TK.isDarkGlass ? .dark : .light)
         .onAppear {
-            if ProcessInfo.processInfo.arguments.contains("--theme=darkglass") {
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("--theme=darkglass") {
                 ThemeManager.shared.raw = AppTheme.darkGlass.rawValue
+            } else if args.contains("--theme=light") {
+                ThemeManager.shared.raw = AppTheme.light.rawValue
             }
         }
     }
