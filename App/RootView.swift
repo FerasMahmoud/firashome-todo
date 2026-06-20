@@ -134,8 +134,8 @@ struct AddTaskBar: View {
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(TK.accent)
                 Text("Add task")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(TK.secondary)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color(red: 0.35, green: 0.35, blue: 0.37))
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())

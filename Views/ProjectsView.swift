@@ -85,7 +85,7 @@ struct ProjectsView: View {
 
     @ViewBuilder
     private func projectRow(for project: Project) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Circle()
                 .fill(project.color)
                 .frame(width: 14, height: 14)

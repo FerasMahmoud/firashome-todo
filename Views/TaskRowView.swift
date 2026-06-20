@@ -72,6 +72,7 @@ struct TaskRowView: View {
             .foregroundStyle(task.isCompleted ? TK.secondary : TK.ink)
             .strikethrough(task.isCompleted, color: TK.secondary)
             .lineLimit(2)
+            .lineSpacing(2)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
     }
