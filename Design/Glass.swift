@@ -15,7 +15,7 @@ extension View {
     @ViewBuilder
     func glassBar() -> some View {
         if #available(iOS 26.0, *) {
-            self.background(.glassEffect)
+            self.glassEffect(in: .rect(cornerRadius: 0, style: .continuous))
         } else {
             self.background(.ultraThinMaterial)
         }
