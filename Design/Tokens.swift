@@ -1,31 +1,29 @@
 import SwiftUI
+import UIKit
 
 /// Design tokens — theme-aware. Colors read from ThemeManager so the whole app
 /// re-skins (light Todoist-style <-> Dark Glass brand) on toggle.
 enum TK {
-    private static var tc: ThemeColors {
-        ThemeManager.shared.current == .darkGlass ? .darkGlass : .light
-    }
     static var isDarkGlass: Bool { ThemeManager.shared.current == .darkGlass }
 
-    // Surfaces
-    static var canvas: Color { tc.canvas }
-    static var grouped: Color { tc.grouped }
-    static var card: Color { tc.card }
+    // Surfaces — dark glass uses system semantic colors (auto-adapt to colorScheme)
+    static var canvas: Color { isDarkGlass ? Color(UIColor.systemBackground) : .white }
+    static var grouped: Color { isDarkGlass ? Color(UIColor.systemGroupedBackground) : Color(red: 0.949, green: 0.949, blue: 0.969) }
+    static var card: Color { isDarkGlass ? Color(UIColor.secondarySystemBackground) : .white }
 
     // Text
-    static var ink: Color { tc.ink }
-    static var secondary: Color { tc.secondary }
+    static var ink: Color { isDarkGlass ? .primary : Color(red: 0.102, green: 0.102, blue: 0.102) }
+    static var secondary: Color { isDarkGlass ? .secondary : Color(red: 0.557, green: 0.557, blue: 0.576) }
 
     // Lines
-    static var hairline: Color { tc.hairline }
-    static var hairlineSoft: Color { tc.hairlineSoft }
+    static var hairline: Color { isDarkGlass ? Color(UIColor.separator) : Color(red: 0.855, green: 0.855, blue: 0.878) }
+    static var hairlineSoft: Color { isDarkGlass ? Color(UIColor.separator) : Color(white: 0.92) }
 
-    // Accent
-    static var accent: Color { tc.accent }
+    // Accent — white in dark glass (monochrome), red in light
+    static var accent: Color { isDarkGlass ? .white : Color(red: 0.863, green: 0.298, blue: 0.306) }
 
     // Completed checkbox fill
-    static var completedFill: Color { tc.completedFill }
+    static var completedFill: Color { isDarkGlass ? Color(white: 1, opacity: 0.3) : Color(red: 0.83, green: 0.84, blue: 0.86) }
 
     // Priority colors — light uses red/orange/blue; dark glass is monochrome (opacity steps)
     static func priority(_ p: Int) -> Color {
