@@ -1,0 +1,40 @@
+name: TestFlight
+
+# Builds a signed .ipa on a free macOS runner and uploads to TestFlight.
+# Requires (as repo secrets):
+#   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (.p8)
+# Run manually until stable, then wire to push: [tags].
+# NOTE: public repo = free macOS runners. Secrets are fine in public repos.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tooling
+        run: |
+          brew install xcodegen fastlane
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Write API key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
+
+      - name: Build & upload
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          fastlane pilot upload \
+            --scheme Todo \
+            --api-key-path <(jq -n '{key_id:\"'$KEY_ID'\",issuer_id:\"'$ISSUER_ID'\",in_house:false,key:\"'$(tr -d '\n' < ~/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8 | sed 's/\\/\\\\/g')'\"}') \
+            --skip_waiting_for_build_processing || true

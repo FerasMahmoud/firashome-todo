@@ -1,0 +1,92 @@
+name: Todo
+options:
+  bundleIdPrefix: uk.firashome
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  Todo:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Design
+      - path: Models
+      - path: Data
+      - path: Views
+      - path: Shared
+      - path: Support
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_CFBundleDisplayName: Tasks
+        ENABLE_PREVIEWS: YES
+    dependencies:
+      - target: TodoWidgets
+    info:
+      path: Support/Info.plist
+      properties:
+        CFBundleDisplayName: Tasks
+        UILaunchScreen:
+          UIColorName: ""
+    entitlements:
+      path: Support/Todo.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.uk.firashome.todo
+
+  TodoWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.widgets
+        INFOPLIST_KEY_CFBundleDisplayName: Tasks Widgets
+        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Support/Widgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.uk.firashome.todo
+
+  TodoScreenshotTests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Todo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.uitests
+
+schemes:
+  Todo:
+    build:
+      targets:
+        Todo: all
+        TodoWidgets: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - TodoScreenshotTests
+    run:
+      config: Debug

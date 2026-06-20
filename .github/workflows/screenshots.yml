@@ -1,0 +1,112 @@
+name: Screenshots
+
+# Builds the app on a free macOS runner, walks each screen via a UI test,
+# captures simulator screenshots on a device matrix, and publishes a
+# device-frame gallery to GitHub Pages -> todo.firashome.uk.
+# This is the "human audit" loop: push -> see every page -> refine.
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: screenshots
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device:
+          - "iPhone 17 Pro Max"
+          - "iPhone 17 Pro"
+          - "iPad Pro 13-inch (M4)"
+          - "iPad mini (A17 Pro)"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show available simulators
+        run: xcrun simctl list devices available | grep -E "iPhone|iPad" || true
+
+      - name: Build for simulator
+        run: |
+          xcodebuild build-for-testing \
+            -scheme Todo \
+            -destination "platform=iOS Simulator,name=${{ matrix.device }}" \
+            -derivedDataPath build | xcpretty
+
+      - name: Run screenshot tests
+        run: |
+          xcodebuild test-without-building \
+            -scheme Todo \
+            -destination "platform=iOS Simulator,name=${{ matrix.device }}" \
+            -only-testing:TodoScreenshotTests/ScreenshotTests \
+            -resultBundlePath "results/${{ matrix.device }}.xcresult" \
+            -derivedDataPath build || true
+
+      - name: Export attachments
+        run: |
+          mkdir -p out
+          xcrun xcresulttool export attachments \
+            --path "results/${{ matrix.device }}.xcresult" \
+            --output-path "out" || true
+
+      - name: Normalize device folder name
+        id: devname
+        run: |
+          name=$(echo "${{ matrix.device }}" | tr ' ' '-' | tr -d '()' | sed 's/[^A-Za-z0-9-]//g')
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Stage into device folder
+        run: |
+          mkdir -p "gallery/devices/${{ steps.devname.outputs.name }}"
+          find out -name "*.png" -exec cp {} "gallery/devices/${{ steps.devname.outputs.name }}/" \; || true
+          ls -R gallery || true
+
+      - name: Upload device screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: shots-${{ steps.devname.outputs.name }}
+          path: gallery/devices/
+
+  publish:
+    needs: capture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all device artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: shots-*
+          merge-multiple: true
+
+      - name: Assemble gallery + device frames
+        run: |
+          mkdir -p gallery/img
+          cp -r artifacts/* gallery/img/ 2>/dev/null || true
+          python3 .github/scripts/build_gallery.py gallery
+          echo "todo.firashome.uk" > gallery/CNAME
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gallery
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
