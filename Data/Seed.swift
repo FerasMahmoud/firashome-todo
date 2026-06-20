@@ -62,6 +62,18 @@ enum Seed {
         task("Renew Notion subscription", priority: 3, order: 8, project: nil)
 
         [urgent, work, home, errands].forEach { context.insert($0) }
+
+        // Demo subtasks on the first today task (shows the checklist feature).
+        let demoTask = ((try? context.fetch(FetchDescriptor<TodoTask>())) ?? [])
+            .first { $0.title == "Review Qiddiya drone survey brief" }
+        if let demoTask {
+            let steps = ["Confirm drone flight clearance", "Prepare camera payload", "Draft coverage map"]
+            for (i, s) in steps.enumerated() {
+                let st = Subtask(title: s, order: i); st.task = demoTask; context.insert(st)
+                if i == 0 { st.isDone = true }
+            }
+        }
+
         [inbox, fittech, personal, shopping].forEach { context.insert($0) }
 
         try? context.save()

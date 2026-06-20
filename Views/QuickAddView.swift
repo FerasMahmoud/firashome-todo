@@ -311,9 +311,14 @@ struct QuickAddView: View {
     }
 
     private func addTask() {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        Repository.add(trimmed, project: selectedProject, due: dueDate, priority: priority, in: context)
+        let raw = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return }
+        // Natural-language parsing: typed hints (today/tomorrow/mon/p1) fill any
+        // field the user didn't explicitly set via the pickers.
+        let parsed = NLParser.parse(raw)
+        let finalDue = dueDate ?? parsed.dueDate
+        let finalPriority = (priority == 4) ? parsed.priority : priority
+        Repository.add(parsed.cleanTitle, project: selectedProject, due: finalDue, priority: finalPriority, in: context)
         dismiss()
     }
 }
