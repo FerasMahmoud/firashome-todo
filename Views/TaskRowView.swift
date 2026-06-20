@@ -44,17 +44,17 @@ struct TaskRowView: View {
                 if task.isCompleted {
                     Circle()
                         .fill(TK.accent)
-                        .frame(width: 18, height: 18)
+                        .frame(width: 20, height: 20)
                     Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
                 } else {
                     Circle()
                         .strokeBorder(TK.priority(task.priority), lineWidth: 1.8)
-                        .frame(width: 18, height: 18)
+                        .frame(width: 20, height: 20)
                 }
             }
-            .frame(width: 18, height: 18)
+            .frame(width: 20, height: 20)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

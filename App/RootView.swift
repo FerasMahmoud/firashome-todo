@@ -3,6 +3,7 @@ import SwiftData
 
 /// Top-level navigation destinations driven from the sidebar.
 enum NavDestination: Hashable {
+    case inbox
     case today
     case upcoming
     case filters
@@ -35,6 +36,7 @@ struct RootView: View {
     private var detail: some View {
         switch selection {
         case .today, nil:      TodayView()
+        case .inbox:           InboxView()
         case .upcoming:        UpcomingView()
         case .filters:         FiltersView()
         case .projects:        ProjectsView()

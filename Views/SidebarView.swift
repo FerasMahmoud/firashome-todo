@@ -21,6 +21,12 @@ struct SidebarView: View {
         List(selection: $selection) {
             // Smart views — no section header (matches Todoist sidebar).
             Section {
+                smartRow(.inbox,
+                         icon: "tray",
+                         label: "Inbox",
+                         tint: Color(hex: "246FE0"),
+                         count: inboxCount,
+                         id: "nav-inbox")
                 smartRow(.today,
                          icon: "sun.max",
                          label: "Today",
@@ -120,6 +126,13 @@ struct SidebarView: View {
     }
 
     // MARK: - Counts
+
+    /// Open tasks with no project — the Inbox bucket.
+    private var inboxCount: Int {
+        openTasks.reduce(into: 0) { acc, task in
+            if task.project == nil { acc += 1 }
+        }
+    }
 
     /// Tasks due today OR earlier and still open.
     private var todayCount: Int {
