@@ -41,7 +41,7 @@ struct ThemeColors {
         grouped: Color.clear,
         card: Color(white: 1, opacity: 0.08),          // brand surface-2: glass panels
         ink: .white,
-        secondary: Color(white: 1, opacity: 0.6),
+        secondary: Color(white: 1, opacity: 0.85),
         hairline: Color(white: 1, opacity: 0.12),
         hairlineSoft: Color(white: 1, opacity: 0.07),
         accent: .white,

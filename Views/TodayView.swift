@@ -60,13 +60,14 @@ struct TodayView: View {
                     .foregroundStyle(TK.secondary)
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 12)
                     .accessibilityIdentifier("today-date-subtitle")
 
                 // Glassy progress ring.
                 ProgressRing(done: doneToday, total: todays.count + doneToday)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
+                    .padding(.top, 6)
+                    .padding(.bottom, 14)
 
                 taskList
             }

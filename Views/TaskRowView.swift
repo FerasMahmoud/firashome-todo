@@ -28,7 +28,7 @@ struct TaskRowView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             trailingFlag
         }
-        .padding(.vertical, 11)
+        .padding(.vertical, 14)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
