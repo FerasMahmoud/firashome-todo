@@ -1,6 +1,19 @@
 default_platform(:ios)
 
 lane :beta do
+  key_id = ENV["ASC_KEY_ID"]
+  p8 = "/tmp/AuthKey_#{key_id}.p8"
+  auth_args = "-allowProvisioningUpdates -authenticationKeyID #{key_id} -authenticationKeyIssuerID #{ENV['ASC_ISSUER_ID']} -authenticationKeyPath #{p8}"
+
+  gym(
+    scheme: "Todo",
+    project: "Todo.xcodeproj",
+    export_method: "app-store",
+    xcargs: auth_args,
+    clean: true,
+    include_bitcode: false
+  )
+
   api_key = app_store_connect_api_key(
     key_id: ENV["ASC_KEY_ID"],
     issuer_id: ENV["ASC_ISSUER_ID"],
@@ -8,26 +21,6 @@ lane :beta do
     in_house: false,
     duration: 1_200
   )
-
-  # Create/fetch distribution cert + provisioning profile (creates the App ID too).
-  # First run creates; readonly:false so it provisions on a fresh account.
-  match(
-    type: "appstore",
-    app_identifier: "uk.firashome.todo",
-    api_key: api_key,
-    readonly: false
-  )
-
-  # Build + sign an App Store .ipa
-  gym(
-    scheme: "Todo",
-    project: "Todo.xcodeproj",
-    export_method: "app-store",
-    clean: true,
-    include_bitcode: false,
-  )
-
-  # Upload to TestFlight
   pilot(
     api_key: api_key,
     app_identifier: "uk.firashome.todo",
