@@ -39,7 +39,7 @@ struct QuickAddView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: addTask) {
                         Text("Add task")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(canAdd ? TK.accent : TK.secondary)
                     }
                     .disabled(!canAdd)

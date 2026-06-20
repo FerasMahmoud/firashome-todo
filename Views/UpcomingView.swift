@@ -47,11 +47,11 @@ struct UpcomingView: View {
 
             ForEach(buckets) { bucket in
                 Section {
-                    // Per spec: TaskListView inside Section(dayLabel), header:nil (the Section supplies the header).
-                    TaskListView(tasks: bucket.tasks, header: nil)
-                        .listRowBackground(TK.canvas)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .accessibilityIdentifier("upcoming-day-\(bucket.idString)")
+                    // Rows inlined (NOT a nested List) so day headers + rows share one grid.
+                    ForEach(bucket.tasks) { task in
+                        TaskRowView(task: task)
+                            .listRowSeparatorTint(TK.hairlineSoft)
+                    }
                 } header: {
                     Text(bucket.label)
                         .font(TK.sectionHeader)
@@ -63,6 +63,7 @@ struct UpcomingView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .background(TK.canvas)
     }
 
     private var emptyState: some View {
