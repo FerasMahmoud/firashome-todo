@@ -39,11 +39,10 @@ jobs:
                      "in_house": False, "key": key}, open("/tmp/api_key.json", "w"))
           PY
           # Create the App Store Connect record if it doesn't exist yet.
-          fastlane produce --app_identifier uk.firashome.todo --name "Tasks" \
+          fastlane produce --app_identifier uk.firashome.todo --app_name "Tasks" \
             --api_key_path /tmp/api_key.json --skip_screenshots --skip_metadata || true
           fastlane pilot upload \
             --app_identifier uk.firashome.todo \
-            --scheme Todo \
             --api_key_path /tmp/api_key.json \
             --skip_waiting_for_build_processing \
-            --include_bitcode false || true
+            --skip_submission || true
