@@ -4,12 +4,13 @@ name: Screenshots
 # captures simulator screenshots, and publishes a device-frame gallery to
 # GitHub Pages -> todo.firashome.uk.
 #
-# SPEED (2026 best practice):
-#  - PUSH (every commit) = FAST path: iPhone 16 Pro Max ONLY. ~2-3 min feedback.
-#  - workflow_dispatch(full=true) = all 4 devices (iPhone 16 Pro Max/Pro, iPad Pro 13", iPad mini).
-#  - DerivedData cached across runs -> incremental builds skip unchanged files (up to ~50% faster).
-#  - Homebrew/xcodegen cached.
-#  - Index-store disabled (project.yml) -> less compiler work per build.
+# SPEED (measured 2026):
+#  - PUSH (every commit) = FAST path: iPhone 16 Pro Max ONLY (~4.5 min, near floor for sim+UITest).
+#  - workflow_dispatch(full=true) = all 4 devices.
+#  - Homebrew/xcodegen cached (saves ~15s).
+#  - Index-store disabled (project.yml) -> less compiler work.
+#  - DerivedData cache REMOVED: Swift module-level invalidation recompiles broadly on any change,
+#    so it didn't help and added 65MB churn.
 
 on:
   push:
@@ -52,14 +53,7 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Cache DerivedData (incremental builds)
-        uses: actions/cache@v4
-        with:
-          path: build
-          key: dd-${{ matrix.device }}-${{ hashFiles('**/*.swift', 'project.yml') }}
-          restore-keys: dd-${{ matrix.device }}-
-
-      - name: Build for simulator (incremental)
+      - name: Build for simulator
         run: |
           xcodebuild build-for-testing \
             -scheme Todo \
