@@ -31,8 +31,8 @@ struct RootView: View {
     /// Dimmed planet background — shows behind transparent (dark glass) content.
     @ViewBuilder
     private var planetBackground: some View {
-        if TK.isDarkGlass {
-            Image("planet")
+        if TK.isDarkGlass, let url = Bundle.main.url(forResource: "planet", withExtension: "jpg"), let data = try? Data(contentsOf: url), let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
