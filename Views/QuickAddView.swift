@@ -28,7 +28,7 @@ struct QuickAddView: View {
 
                 Spacer(minLength: 16)
             }
-            .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+            .background { GlassPlanetBg() }
             .toolbar {
                 // Todoist quick-add chrome: Cancel (left), Add task (right, red).
                 ToolbarItem(placement: .topBarLeading) {

@@ -19,6 +19,7 @@ struct FiltersView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
+            .listRowBackground(TK.isDarkGlass ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(TK.canvas))
             .background(TK.grouped)
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.large)
@@ -180,7 +181,7 @@ struct FilterResultView: View {
                 TaskListView(tasks: filtered, header: nil)
             }
         }
-        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        .background { GlassPlanetBg() }
         .navigationTitle(kind.title)
         .navigationBarTitleDisplayMode(.large)
     }
@@ -229,7 +230,7 @@ struct FilterResultView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        .background { GlassPlanetBg() }
     }
 
     private var emptyTitle: String {

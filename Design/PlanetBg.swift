@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// Loads the bundled planet image for the dark-glass background.
 enum PlanetBg {
     static func image() -> UIImage? {
         guard let url = Bundle.main.url(forResource: "planet", withExtension: "jpg"),
@@ -10,7 +9,7 @@ enum PlanetBg {
     }
 }
 
-/// A view showing the dimmed planet as a background layer.
+/// Planet image layer (dimmed).
 struct PlanetLayer: View {
     var body: some View {
         if let img = PlanetBg.image() {
@@ -20,6 +19,21 @@ struct PlanetLayer: View {
                 .brightness(-0.12)
                 .overlay(Color.black.opacity(0.22))
                 .ignoresSafeArea()
+        }
+    }
+}
+
+/// FROSTED GLASS background: planet + ultraThinMaterial (real blur, not flat tint).
+/// This is the actual glassmorphism — the material blurs the planet behind it.
+struct GlassPlanetBg: View {
+    var body: some View {
+        if TK.isDarkGlass {
+            ZStack {
+                PlanetLayer()
+                Rectangle().fill(.ultraThinMaterial)
+            }
+        } else {
+            TK.canvas
         }
     }
 }

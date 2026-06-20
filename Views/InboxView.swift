@@ -9,7 +9,7 @@ struct InboxView: View {
 
     var body: some View {
         content
-            .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+            .background { GlassPlanetBg() }
             .navigationTitle("Inbox")
             .navigationBarTitleDisplayMode(.large)
     }
@@ -34,7 +34,8 @@ struct InboxView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+            .listRowBackground(TK.isDarkGlass ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(TK.canvas))
+            .background { GlassPlanetBg() }
         }
     }
 
@@ -60,7 +61,7 @@ struct InboxView: View {
         }
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        .background { GlassPlanetBg() }
         .accessibilityIdentifier("inbox-empty-state")
     }
 }

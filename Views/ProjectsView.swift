@@ -38,7 +38,7 @@ struct ProjectsView: View {
                 projectList
             }
         }
-        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        .background { GlassPlanetBg() }
         .navigationTitle("Projects")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -81,6 +81,7 @@ struct ProjectsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+            .listRowBackground(TK.isDarkGlass ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(TK.canvas))
     }
 
     @ViewBuilder
@@ -121,7 +122,7 @@ struct ProjectsView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        .background { GlassPlanetBg() }
         .accessibilityIdentifier("projects-empty")
     }
 
@@ -192,7 +193,7 @@ struct ProjectsView: View {
                 .accessibilityIdentifier("projects-add-confirm")
             }
             .padding(20)
-            .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+            .background { GlassPlanetBg() }
             .navigationTitle("New Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
