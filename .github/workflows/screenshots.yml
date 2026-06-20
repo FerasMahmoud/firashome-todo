@@ -1,14 +1,25 @@
 name: Screenshots
 
 # Builds the app on a free macOS runner, walks each screen via a UI test,
-# captures simulator screenshots on a device matrix, and publishes a
-# device-frame gallery to GitHub Pages -> todo.firashome.uk.
-# This is the "human audit" loop: push -> see every page -> refine.
+# captures simulator screenshots, and publishes a device-frame gallery to
+# GitHub Pages -> todo.firashome.uk.
+#
+# SPEED (2026 best practice):
+#  - PUSH (every commit) = FAST path: iPhone 16 Pro Max ONLY. ~2-3 min feedback.
+#  - workflow_dispatch(full=true) = all 4 devices (iPhone 16 Pro Max/Pro, iPad Pro 13", iPad mini).
+#  - DerivedData cached across runs -> incremental builds skip unchanged files (up to ~50% faster).
+#  - Homebrew/xcodegen cached.
+#  - Index-store disabled (project.yml) -> less compiler work per build.
 
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      full:
+        description: 'Render ALL 4 devices (slower)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,29 +36,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device:
-          - "iPhone 16 Pro Max"
-          - "iPhone 16 Pro"
-          - "iPad Pro 13-inch (M4)"
-          - "iPad mini (A17 Pro)"
+        device: ${{ (github.event.inputs.full == 'true') && fromJson('["iPhone 16 Pro Max","iPhone 16 Pro","iPad Pro 13-inch (M4)","iPad mini (A17 Pro)"]') || fromJson('["iPhone 16 Pro Max"]') }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install XcodeGen
+      - name: Cache Homebrew (xcodegen)
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: brew-xcodegen-2026
+
+      - name: Install XcodeGen (cached)
         run: brew install xcodegen
 
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Show available simulators
-        run: xcrun simctl list devices available | grep -E "iPhone|iPad" || true
+      - name: Cache DerivedData (incremental builds)
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: dd-${{ matrix.device }}-${{ hashFiles('**/*.swift', 'project.yml') }}
+          restore-keys: dd-${{ matrix.device }}-
 
-      - name: Build for simulator
+      - name: Build for simulator (incremental)
         run: |
           xcodebuild build-for-testing \
             -scheme Todo \
             -destination "platform=iOS Simulator,name=${{ matrix.device }}" \
-            -derivedDataPath build | xcpretty
+            -derivedDataPath build \
+            -skipMacroValidation -skipPackagePluginValidation \
+            | xcpretty
 
       - name: Run screenshot tests
         run: |
@@ -71,10 +90,17 @@ jobs:
           name=$(echo "${{ matrix.device }}" | tr ' ' '-' | tr -d '()' | sed 's/[^A-Za-z0-9-]//g')
           echo "name=$name" >> "$GITHUB_OUTPUT"
 
-      - name: Stage into device folder
+      - name: Stage + friendly-rename screenshots
         run: |
           mkdir -p "gallery/devices/${{ steps.devname.outputs.name }}"
-          find out -name "*.png" -exec cp {} "gallery/devices/${{ steps.devname.outputs.name }}/" \; || true
+          # Screenshots export with UUID filenames in capture order; rename to friendly page names.
+          labels=("01-today" "02-upcoming" "03-filters" "04-projects" "05-quickadd")
+          i=0
+          while IFS= read -r f; do
+            [ "$i" -ge "${#labels[@]}" ] && break
+            cp "$f" "gallery/devices/${{ steps.devname.outputs.name }}/${labels[$i]}.png"
+            i=$((i+1))
+          done < <(find out -name "*.png" | sort)
           ls -R gallery || true
 
       - name: Upload device screenshots
@@ -82,6 +108,7 @@ jobs:
         with:
           name: shots-${{ steps.devname.outputs.name }}
           path: gallery/devices/
+          if-no-files-found: warn
 
   publish:
     needs: capture

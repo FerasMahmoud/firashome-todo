@@ -12,6 +12,10 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
+    # Speed: skip index-store generation on CI (no IDE consuming it).
+    COMPILER_INDEX_STORE_ENABLE: NO
+    SWIFT_INDEX_STORE_ENABLE: NO
+    CLANG_INDEX_STORE_ENABLE: NO
 
 targets:
   Todo:
