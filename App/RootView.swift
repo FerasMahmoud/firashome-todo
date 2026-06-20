@@ -50,6 +50,7 @@ struct RootView: View {
                 splitBody
             }
         }
+        .colorScheme(TK.isDarkGlass ? .dark : .light)
         .onAppear {
             if ProcessInfo.processInfo.arguments.contains("--theme=darkglass") {
                 ThemeManager.shared.raw = AppTheme.darkGlass.rawValue
