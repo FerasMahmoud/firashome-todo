@@ -37,7 +37,7 @@ struct ThemeColors {
 
     /// Dark Glass: black canvas, white ink, translucent glass surfaces, monochrome.
     static let darkGlass = ThemeColors(
-        canvas: .clear,                       // transparent -> root planet shows through
+        canvas: Color(red: 0.02, green: 0.02, blue: 0.035),                       // transparent -> root planet shows through
         grouped: Color(white: 1, opacity: 0.045),
         card: Color(white: 1, opacity: 0.07),
         ink: .white,
