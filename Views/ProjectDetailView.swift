@@ -351,7 +351,7 @@ struct ProjectDetailView: View {
     let projectID = container.mainContext
         .fetch(FetchDescriptor<Project>())
         .first(where: { $0.name == "FITech" })!.id
-    return ProjectDetailView(projectID: projectID)
+    ProjectDetailView(projectID: projectID)
         .modelContainer(container)
 }
 
@@ -372,6 +372,6 @@ struct ProjectDetailView: View {
     }
     let projectID = ctx.fetch(FetchDescriptor<Project>())
         .first(where: { $0.name == "Personal" })!.id
-    return ProjectDetailView(projectID: projectID)
+    ProjectDetailView(projectID: projectID)
         .modelContainer(container)
 }

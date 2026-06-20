@@ -242,7 +242,7 @@ struct TaskRowView: View {
         FetchDescriptor<TodoTask>(sortBy: [SortDescriptor(\.order)])
     )) ?? []
 
-    return List {
+    List {
         ForEach(tasks) { task in
             TaskRowView(task: task)
         }

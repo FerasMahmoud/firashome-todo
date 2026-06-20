@@ -281,6 +281,6 @@ struct FilterResultView: View {
         priority: 4,
         dueDate: nil
     ))
-    return FiltersView()
+    FiltersView()
         .modelContainer(container)
 }

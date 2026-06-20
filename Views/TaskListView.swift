@@ -82,6 +82,6 @@ struct TaskListView: View {
         TodoTask(title: "Email Qiddiya team",       priority: 3, project: project),
         TodoTask(title: "Walk SkyAtlas checkpoints", priority: 4)
     ]
-    return TaskListView(tasks: sample, header: "Today")
+    TaskListView(tasks: sample, header: "Today")
         .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
 }

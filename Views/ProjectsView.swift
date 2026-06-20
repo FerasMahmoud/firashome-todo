@@ -265,7 +265,7 @@ struct ProjectsView: View {
     ctx.insert(TodoTask(title: "Buy groceries", priority: 2, project: p3))
     ctx.insert(TodoTask(title: "Review Q3 report", priority: 1, project: p2))
     ctx.insert(TodoTask(title: "Morning run", priority: 4, project: p1))
-    return NavigationStack {
+    NavigationStack {
         ProjectsView()
     }
     .modelContainer(container)

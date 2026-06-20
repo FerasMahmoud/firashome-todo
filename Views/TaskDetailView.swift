@@ -398,7 +398,7 @@ struct TaskDetailView: View {
     let previewContext = container.mainContext
     let task = try! previewContext.fetch(FetchDescriptor<TodoTask>()).first!
 
-    return NavigationStack {
+    NavigationStack {
         TaskDetailView(task: task)
     }
     .modelContainer(container)
