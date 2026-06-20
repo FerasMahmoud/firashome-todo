@@ -61,6 +61,28 @@ struct RootView: View {
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         AddTaskBar { showingQuickAdd = true }
                     }
+                    .toolbar {
+                        // Todoist-style nav chrome: menu (left), search + more (right).
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button { } label: {
+                                Image(systemName: "line.3.horizontal")
+                                    .foregroundStyle(TK.secondary)
+                            }
+                            .accessibilityLabel("Menu")
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            HStack(spacing: 18) {
+                                Button { } label: {
+                                    Image(systemName: "magnifyingglass")
+                                        .foregroundStyle(TK.secondary)
+                                }
+                                Button { } label: {
+                                    Image(systemName: "ellipsis")
+                                        .foregroundStyle(TK.secondary)
+                                }
+                            }
+                        }
+                    }
             }
             .tint(TK.accent)
             .sheet(isPresented: $showingQuickAdd) { QuickAddView() }
