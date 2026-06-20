@@ -87,15 +87,47 @@ jobs:
       - name: Stage + friendly-rename screenshots
         run: |
           mkdir -p "gallery/devices/${{ steps.devname.outputs.name }}"
-          # Screenshots export with UUID filenames in capture order; rename to friendly page names.
-          labels=("01-today" "02-upcoming" "03-filters" "04-projects" "05-quickadd")
-          i=0
-          while IFS= read -r f; do
-            [ "$i" -ge "${#labels[@]}" ] && break
-            cp "$f" "gallery/devices/${{ steps.devname.outputs.name }}/${labels[$i]}.png"
-            i=$((i+1))
-          done < <(find out -name "*.png" | sort)
+          # Screenshots export with UUID filenames; rename to friendly page names by manifest.
+          python3 - <<'PY'
+          import json, os, shutil, glob
+          dev = os.environ["DEV"]
+          out = "out"
+          dest = f"gallery/devices/{dev}"
+          os.makedirs(dest, exist_ok=True)
+          labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
+          # Try manifest mapping (UUID file -> attachment name) first.
+          mapping = {}
+          mani = os.path.join(out, "manifest.json")
+          if os.path.exists(mani):
+              try:
+                  raw = json.load(open(mani))
+              except Exception:
+                  raw = None
+              def walk(o):
+                  if isinstance(o, dict):
+                      name = o.get("name") or o.get("suggestedName") or o.get("attachmentName")
+                      path = o.get("exportPath") or o.get("path") or o.get("file") or o.get("fileName")
+                      if name and path:
+                          mapping[os.path.basename(path)] = name
+                      for v in o.values(): walk(v)
+                  elif isinstance(o, list):
+                      for v in o: walk(v)
+              if raw is not None: walk(raw)
+          pngs = sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))
+          if mapping and len(mapping) >= len(pngs):
+              for p in pngs:
+                  nm = mapping.get(os.path.basename(p), os.path.basename(p))
+                  shutil.copy(p, os.path.join(dest, nm + ".png" if not nm.endswith(".png") else nm))
+          else:
+              # Fallback: positional sorted -> label.
+              for i, p in enumerate(pngs):
+                  if i >= len(labels): break
+                  shutil.copy(p, os.path.join(dest, labels[i] + ".png"))
+          print("Staged:", sorted(os.listdir(dest)))
+          PY
           ls -R gallery || true
+        env:
+          DEV: ${{ steps.devname.outputs.name }}
 
       - name: Upload device screenshots
         uses: actions/upload-artifact@v4

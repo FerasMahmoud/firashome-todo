@@ -17,7 +17,25 @@ struct RootView: View {
     @State private var selection: NavDestination? = .today
     @State private var showingQuickAdd = false
 
+    /// When launched with `--screen=<id>` (screenshot mode), render that screen
+    /// full-screen deterministically — bypassing the split-view so the UITest
+    /// can capture each page without relying on sidebar tap discovery.
+    private var screenshotScreen: String? {
+        ProcessInfo.processInfo.arguments
+            .first { $0.hasPrefix("--screen=") }?
+            .replacingOccurrences(of: "--screen=", with: "")
+    }
+
     var body: some View {
+        if let screen = screenshotScreen {
+            screenshotBody(screen)
+        } else {
+            splitBody
+        }
+    }
+
+    @ViewBuilder
+    private var splitBody: some View {
         NavigationSplitView {
             SidebarView(selection: $selection)
         } detail: {
@@ -32,16 +50,52 @@ struct RootView: View {
         }
     }
 
+    /// Full-screen single screen for screenshot capture.
+    @ViewBuilder
+    private func screenshotBody(_ screen: String) -> some View {
+        if screen == "quickadd" {
+            QuickAddView()
+        } else {
+            NavigationStack {
+                detailView(NavDestination(screen: screen) ?? .today)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        AddTaskBar { showingQuickAdd = true }
+                    }
+            }
+            .tint(TK.accent)
+            .sheet(isPresented: $showingQuickAdd) { QuickAddView() }
+        }
+    }
+
     @ViewBuilder
     private var detail: some View {
-        switch selection {
-        case .today, nil:      TodayView()
+        if let sel = selection { detailView(sel) } else { TodayView() }
+    }
+
+    @ViewBuilder
+    private func detailView(_ sel: NavDestination) -> some View {
+        switch sel {
+        case .today:           TodayView()
         case .inbox:           InboxView()
         case .upcoming:        UpcomingView()
         case .filters:         FiltersView()
         case .projects:        ProjectsView()
         case .labels:          LabelsView()
         case .project(let id): ProjectDetailView(projectID: id)
+        }
+    }
+}
+
+extension NavDestination {
+    init?(screen: String) {
+        switch screen {
+        case "today":    self = .today
+        case "inbox":    self = .inbox
+        case "upcoming": self = .upcoming
+        case "filters":  self = .filters
+        case "projects": self = .projects
+        case "labels":   self = .labels
+        default:         return nil
         }
     }
 }

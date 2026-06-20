@@ -1,49 +1,41 @@
 import XCTest
 
-/// Captures a screenshot of each main screen for the todo.firashome.uk gallery.
-/// Launches the app with --seed-demo so every screen has realistic content.
+/// Captures a screenshot of EACH main screen for the todo.firashome.uk gallery.
+/// Deterministic: relaunches the app per screen with `--screen=<id>` (RootView
+/// renders that screen full-screen), so every page is captured regardless of
+/// sidebar tap discoverability. Attachments are added in this fixed order,
+/// matching the gallery labels.
 final class ScreenshotTests: XCTestCase {
 
     override func setUpWithError() throws {
-        continueAfterFailure = false
+        continueAfterFailure = true
     }
 
-    func testCaptureAllScreens() throws {
+    func testCaptureAllScreens() {
         let app = XCUIApplication()
-        app.launchArguments = ["--seed-demo", "-UITestScreenshotMode"]
-        app.launch()
+        let screens = [
+            ("today", "01-today"),
+            ("inbox", "02-inbox"),
+            ("upcoming", "03-upcoming"),
+            ("filters", "04-filters"),
+            ("projects", "05-projects"),
+            ("quickadd", "06-quickadd"),
+        ]
 
-        // Capture the default (Today) screen first.
-        capture(app, named: "01-today", tapIdentifier: nil)
+        for (screen, name) in screens {
+            app.launchArguments = ["--seed-demo", "--screen=\(screen)", "-UITestScreenshotMode"]
+            app.launch()
+            // Give the view + SwiftData seed a moment to render.
+            _ = app.windows.firstMatch.waitForExistence(timeout: 8)
+            Thread.sleep(forTimeInterval: 0.8)
 
-        // Tap through nav — these accessibility IDs are set on sidebar rows.
-        capture(app, named: "02-upcoming", tapIdentifier: "nav-upcoming")
-        capture(app, named: "03-filters", tapIdentifier: "nav-filters")
-        capture(app, named: "04-projects", tapIdentifier: "nav-projects")
+            let shot = app.screenshot()
+            let a = XCTAttachment(screenshot: shot)
+            a.name = name
+            a.lifetime = .keepAlways
+            add(a)
 
-        // Open quick-add sheet
-        if app.buttons["Add task"].waitForExistence(timeout: 3) {
-            app.buttons["Add task"].tap()
-            capture(app, named: "05-quickadd", tapIdentifier: nil)
-            if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+            app.terminate()
         }
-    }
-
-    private func capture(_ app: XCUIApplication, named name: String, tapIdentifier id: String?) {
-        if let id {
-            // Sidebar List rows can surface as buttons, cells, or otherElements.
-            for el in [app.buttons[id], app.cells[id], app.otherElements[id]] {
-                if el.waitForExistence(timeout: 3) {
-                    el.tap()
-                    _ = app.windows.firstMatch.waitForExistence(timeout: 2)
-                    break
-                }
-            }
-        }
-        let shot = app.screenshot()
-        let a = XCTAttachment(screenshot: shot)
-        a.name = name
-        a.lifetime = .keepAlways
-        add(a)
     }
 }
