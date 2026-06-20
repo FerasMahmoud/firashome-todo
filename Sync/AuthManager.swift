@@ -3,7 +3,6 @@ import SwiftUI
 import SwiftData
 
 /// Holds auth state + drives sync. Token/email/baseURL persist in @AppStorage.
-@MainActor
 final class AuthManager: ObservableObject {
     @AppStorage("api_base_url") var baseURL: String = SyncClient.defaultBaseURL
     @AppStorage("api_token") private var token: String?
