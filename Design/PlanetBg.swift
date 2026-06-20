@@ -49,3 +49,18 @@ struct GlassRowBg: View {
         }
     }
 }
+
+/// Frosted glass background: planet + ultraThinMaterial (real blur, same as Quick Add sheet).
+/// This is what makes it look GLASSY — the material blurs the planet behind it.
+struct FrostedGlassBg: View {
+    var body: some View {
+        if TK.isDarkGlass {
+            ZStack {
+                PlanetLayer()
+                Rectangle().fill(.ultraThinMaterial)
+            }
+        } else {
+            TK.canvas
+        }
+    }
+}
