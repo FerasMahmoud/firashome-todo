@@ -47,14 +47,14 @@ struct QuickAddView: View {
                 }
             }
         }
-        .background(TK.canvas)
+        .background(.ultraThinMaterial)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.hidden)
         .onAppear {
             // Screenshot mode: pre-fill a realistic entry so the sheet looks active
             // (red Add button, filled chips) instead of empty/gray.
             if ProcessInfo.processInfo.arguments.contains("--screen=quickadd") {
-                title = "Pay the Qiddiya contractor p1 tomorrow"
+                title = "Review drone brief p1"
                 priority = 1
                 dueDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now))
                 selectedProject = projects.first(where: { $0.name == "FITech" }) ?? projects.first
