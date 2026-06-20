@@ -36,8 +36,8 @@ struct RootView: View {
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
-                .brightness(-0.3)
-                .overlay(Color.black.opacity(0.35).ignoresSafeArea())
+                .brightness(-0.12)
+                .overlay(Color.black.opacity(0.22).ignoresSafeArea())
         }
     }
 

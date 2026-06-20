@@ -35,13 +35,13 @@ struct ThemeColors {
         accent: Color(red: 0.863, green: 0.298, blue: 0.306),
         completedFill: Color(red: 0.83, green: 0.84, blue: 0.86))
 
-    /// Dark Glass: black canvas, white ink, translucent glass surfaces, monochrome.
+    /// Dark Glass: translucent white glass panels over a visible planet (brand.firashome.uk).
     static let darkGlass = ThemeColors(
-        canvas: Color(red: 0.02, green: 0.02, blue: 0.035),                       // transparent -> root planet shows through
-        grouped: Color(white: 1, opacity: 0.045),
-        card: Color(white: 1, opacity: 0.07),
+        canvas: Color(white: 1, opacity: 0.05),       // brand surface-1: faint frosted glass
+        grouped: Color.clear,
+        card: Color(white: 1, opacity: 0.08),          // brand surface-2: glass panels
         ink: .white,
-        secondary: Color(white: 1, opacity: 0.62),
+        secondary: Color(white: 1, opacity: 0.6),
         hairline: Color(white: 1, opacity: 0.12),
         hairlineSoft: Color(white: 1, opacity: 0.07),
         accent: .white,
