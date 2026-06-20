@@ -50,9 +50,8 @@ struct TodayView: View {
             emptyState
         } else {
             VStack(alignment: .leading, spacing: 0) {
-                // Date subtitle — sits right under the large "Today" nav title
-                // and stays pinned as the list scrolls underneath it.
-                Text(dateSubtitle)
+                // Date subtitle + task count — sits under the large "Today" nav title.
+                Text("\(dateSubtitle) · \(todays.count + overdue.count) tasks")
                     .font(TK.subhead)
                     .foregroundStyle(TK.secondary)
                     .padding(.horizontal, 20)
