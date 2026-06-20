@@ -22,6 +22,7 @@ struct TaskDetailView: View {
     /// date in a single coordinated write.
     @State private var hasDueDate: Bool
     @State private var showDeleteConfirm: Bool = false
+    @State private var newSubtask: String = ""
 
     init(task: TodoTask) {
         self.task = task
@@ -35,6 +36,7 @@ struct TaskDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 titleCard(task: task)
                 noteCard(task: task)
+                subtasksCard(task: task)
                 projectCard(task: task)
                 dueCard(task: task)
                 priorityCard(task: task)
@@ -154,6 +156,66 @@ struct TaskDetailView: View {
             RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
                 .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
         )
+    }
+
+    // MARK: - Subtasks (checklist)
+
+    private func subtasksCard(task: TodoTask) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "checklist")
+                    .font(TK.sectionHeader)
+                    .foregroundStyle(TK.secondary)
+                sectionLabel("Subtasks")
+                Spacer()
+                let total = task.subtasks.count
+                if total > 0 {
+                    let done = task.subtasks.filter(\.isDone).count
+                    Text("\(done)/\(total)")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(TK.secondary)
+                }
+            }
+
+            ForEach(task.subtasks.sorted(by: { $0.order < $1.order })) { st in
+                HStack(spacing: 10) {
+                    Button {
+                        st.isDone.toggle()
+                        try? context.save()
+                    } label: {
+                        Image(systemName: st.isDone ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(st.isDone ? TK.accent : TK.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    Text(st.title)
+                        .font(TK.body)
+                        .foregroundStyle(st.isDone ? TK.secondary : TK.ink)
+                        .strikethrough(st.isDone, color: TK.secondary)
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .foregroundStyle(TK.secondary)
+                TextField("Add a step", text: $newSubtask)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        let trimmed = newSubtask.trimmingCharacters(in: .whitespaces)
+                        guard !trimmed.isEmpty else { return }
+                        let order = (task.subtasks.map(\.order).max() ?? -1) + 1
+                        let st = Subtask(title: trimmed, order: order)
+                        st.task = task
+                        context.insert(st)
+                        try? context.save()
+                        newSubtask = ""
+                    }
+            }
+            .padding(.vertical, 6)
+        }
+        .padding(14)
+        .liquidGlass(cornerRadius: TK.rCard)
     }
 
     // MARK: - Project

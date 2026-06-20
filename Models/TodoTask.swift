@@ -15,6 +15,7 @@ final class TodoTask {
     var order: Int
     var project: Project?
     var labels: [Label] = []
+    @Relationship(deleteRule: .cascade, inverse: \Subtask.task) var subtasks: [Subtask] = []
 
     var isCompleted: Bool { completedAt != nil }
 

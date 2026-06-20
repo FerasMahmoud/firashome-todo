@@ -6,7 +6,7 @@ struct TodoApp: App {
     let container: ModelContainer
 
     init() {
-        let schema = Schema([TodoTask.self, Project.self, Label.self])
+        let schema = Schema([TodoTask.self, Project.self, Label.self, Subtask.self])
         let config = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false
