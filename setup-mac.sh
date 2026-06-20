@@ -1,19 +1,33 @@
 #!/bin/bash
-# Run this on a Mac (MacinCloud / MacStadium / your Mac). Sets up + opens the app.
+# Firashome "Tasks" app — one-command setup on any Mac (no admin/root needed).
+# Works on MacinCloud Managed ($25/mo, no-admin) plan.
 set -e
-echo "==> Checking for Homebrew..."
-if ! command -v brew >/dev/null 2>&1; then
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+cd "$HOME"
+APPDIR="$HOME/firashome-todo"
+
+echo "==> Downloading the app from GitHub..."
+if [ -d "$APPDIR/.git" ]; then
+  cd "$APPDIR" && git pull --ff-only
+else
+  git clone https://github.com/FerasMahmoud/firashome-todo.git "$APPDIR"
+  cd "$APPDIR"
 fi
-echo "==> Installing XcodeGen..."
-brew install xcodegen || true
-echo "==> Cloning the app..."
-git clone https://github.com/FerasMahmoud/firashome-todo.git 2>/dev/null || true
-cd firashome-todo
-echo "==> Generating Xcode project..."
-xcodegen generate
+
+echo "==> Downloading XcodeGen binary (no Homebrew/admin needed)..."
+WORK=$(mktemp -d)
+curl -fsSL -o "$WORK/xcodegen.zip" https://github.com/yonaskolb/XcodeGen/releases/latest/download/xcodegen.zip
+unzip -q -o "$WORK/xcodegen.zip" -d "$WORK/xg"
+XGEN=$(find "$WORK/xg" -name xcodegen -type f | head -1)
+chmod +x "$XGEN"
+
+echo "==> Generating the Xcode project..."
+"$XGEN" generate
+
 echo "==> Opening in Xcode..."
-open Todo.xcodeproj
+open "$APPDIR/Todo.xcodeproj"
+
 echo ""
-echo "✅ Xcode is open. Press Cmd+R (or the ▶️ button) to run in the iPhone Simulator."
-echo "   To put it on your iPhone: Product menu → Archive → Distribute App → TestFlight."
+echo "✅ Done. Xcode is opening."
+echo "   ▶  Press Cmd+R (or the play button) to run in the iPhone Simulator."
+echo "   ▶  For your real iPhone: Xcode menu → Product → Archive → Distribute App → TestFlight."
