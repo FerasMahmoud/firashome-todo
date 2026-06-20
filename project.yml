@@ -49,9 +49,6 @@ targets:
           UIColorName: ""
     entitlements:
       path: Support/Todo.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.uk.firashome.todo
 
   TodoWidgets:
     type: app-extension
