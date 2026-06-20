@@ -24,7 +24,8 @@ lane :beta do
     project: "Todo.xcodeproj",
     export_method: "app-store",
     clean: true,
-    include_bitcode: false
+    include_bitcode: false,
+    xcargs: "-allowProvisioningUpdates"
   )
 
   # Upload to TestFlight
