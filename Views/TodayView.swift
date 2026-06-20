@@ -70,7 +70,7 @@ struct TodayView: View {
                 Section {
                     ForEach(overdue) { task in
                         TaskRowView(task: task)
-                            .listRowSeparator(.hidden)
+                            .listRowSeparatorTint(TK.hairlineSoft)
                     }
                 } header: {
                     HStack(spacing: 6) {
@@ -91,7 +91,7 @@ struct TodayView: View {
                 Section {
                     ForEach(todays) { task in
                         TaskRowView(task: task)
-                            .listRowSeparator(.hidden)
+                            .listRowSeparatorTint(TK.hairlineSoft)
                     }
                 }
             }

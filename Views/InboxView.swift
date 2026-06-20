@@ -23,7 +23,7 @@ struct InboxView: View {
                 Section {
                     ForEach(sorted) { task in
                         TaskRowView(task: task)
-                        .listRowSeparator(.hidden)
+                        .listRowSeparatorTint(TK.hairlineSoft)
                     }
                 } header: {
                     Text("Tasks")
