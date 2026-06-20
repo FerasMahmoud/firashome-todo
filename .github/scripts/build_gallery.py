@@ -9,10 +9,8 @@ import html
 from pathlib import Path
 
 DEVICE_LABELS = [
-    ("max", ("iPhone 16 Pro Max", "phone")),
-    ("mini", ("iPad mini (A17 Pro)", "tablet")),
-    ("iphone", ("iPhone 16 Pro", "phone")),
-    ("ipad", ("iPad Pro 13″ (M4)", "tablet")),
+    ("iphone", ("iPhone", "phone")),
+    ("ipad", ("iPad", "tablet")),
 ]
 
 def label_for(folder_name: str):

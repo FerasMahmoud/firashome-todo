@@ -1,16 +1,15 @@
 name: Screenshots
 
-# Builds the app on a free macOS runner, walks each screen via a UI test,
-# captures simulator screenshots, and publishes a device-frame gallery to
-# GitHub Pages -> todo.firashome.uk.
+# Builds the app on a free macOS runner, captures each screen, and publishes a
+# device-frame gallery to GitHub Pages -> todo.firashome.uk.
 #
-# SPEED (measured 2026):
-#  - PUSH (every commit) = FAST path: iPhone 16 Pro Max ONLY (~4.5 min, near floor for sim+UITest).
-#  - workflow_dispatch(full=true) = all 4 devices.
-#  - Homebrew/xcodegen cached (saves ~15s).
-#  - Index-store disabled (project.yml) -> less compiler work.
-#  - DerivedData cache REMOVED: Swift module-level invalidation recompiles broadly on any change,
-#    so it didn't help and added 65MB churn.
+# SPEED/ROBUSTNESS (measured 2026):
+#  - PUSH = FAST path: 1 iPhone, ~4 min.
+#  - workflow_dispatch(full=true) = iPhone + iPad.
+#  - Simulator is RESOLVED DYNAMICALLY from what's actually installed on the runner
+#    (hardcoded names like "iPhone 16 Pro Max" aren't always present -> build fails).
+#  - Homebrew/xcodegen cached; index-store disabled.
+#  - Publish is GUARDED: never clobbers the live gallery with an empty/failed capture.
 
 on:
   push:
@@ -18,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       full:
-        description: 'Render ALL 4 devices (slower)'
+        description: 'Render iPhone AND iPad (slower)'
         type: boolean
         default: false
 
@@ -37,9 +36,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device: ${{ (github.event.inputs.full == 'true') && fromJson('["iPhone 16 Pro Max","iPhone 16 Pro","iPad Pro 13-inch (M4)","iPad mini (A17 Pro)"]') || fromJson('["iPhone 16 Pro Max"]') }}
+        include:
+          - label: "iPhone"
+            pick: "iPhone"
+            kind: "phone"
+          - label: "iPad"
+            pick: "iPad"
+            kind: "tablet"
+    # Fast path: push only renders the iPhone. Manual full=true renders both.
+    if: ${{ (github.event_name != 'push') || (matrix.label == 'iPhone') || (github.event.inputs.full == 'true') }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve an available simulator
+        id: sim
+        run: |
+          name=$(xcrun simctl list devices available -j \
+            | jq -r '.devices | to_entries[] | .value[] | select(.isAvailable and (.name | test("${{ matrix.pick }}"))) | .name' \
+            | head -1)
+          echo "Using simulator: $name"
+          if [ -z "$name" ]; then echo "No ${{ matrix.pick }} simulator available"; exit 1; fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
 
       - name: Cache Homebrew (xcodegen)
         uses: actions/cache@v4
@@ -57,7 +74,7 @@ jobs:
         run: |
           xcodebuild build-for-testing \
             -scheme Todo \
-            -destination "platform=iOS Simulator,name=${{ matrix.device }}" \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -derivedDataPath build \
             -skipMacroValidation -skipPackagePluginValidation \
             | xcpretty
@@ -66,37 +83,26 @@ jobs:
         run: |
           xcodebuild test-without-building \
             -scheme Todo \
-            -destination "platform=iOS Simulator,name=${{ matrix.device }}" \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -only-testing:TodoScreenshotTests/ScreenshotTests \
-            -resultBundlePath "results/${{ matrix.device }}.xcresult" \
-            -derivedDataPath build || true
+            -resultBundlePath "results/${{ matrix.label }}.xcresult" \
+            -derivedDataPath build
 
       - name: Export attachments
         run: |
           mkdir -p out
           xcrun xcresulttool export attachments \
-            --path "results/${{ matrix.device }}.xcresult" \
-            --output-path "out" || true
+            --path "results/${{ matrix.label }}.xcresult" \
+            --output-path "out"
 
-      - name: Normalize device folder name
-        id: devname
+      - name: Stage + friendly-rename screenshots (preserve capture order)
         run: |
-          name=$(echo "${{ matrix.device }}" | tr ' ' '-' | tr -d '()' | sed 's/[^A-Za-z0-9-]//g')
-          echo "name=$name" >> "$GITHUB_OUTPUT"
-
-      - name: Stage + friendly-rename screenshots
-        run: |
-          mkdir -p "gallery/devices/${{ steps.devname.outputs.name }}"
           python3 - <<'PY'
           import json, os, shutil, glob
-          dev = os.environ["DEV"]
           out = "out"
-          dest = f"gallery/devices/{dev}"
+          dest = f"gallery/devices/${{ matrix.label }}"
           os.makedirs(dest, exist_ok=True)
           labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
-          # Collect attachment (filename, name) pairs from the manifest IN DOCUMENT ORDER
-          # (= capture order). xcresulttool writes UUID filenames, so sorting by name
-          # scrambles them; the manifest preserves order.
           ordered = []
           mani = os.path.join(out, "manifest.json")
           if os.path.exists(mani):
@@ -115,29 +121,23 @@ jobs:
           print("manifest entries (ordered):", ordered)
           if len(ordered) >= len(labels):
               for i, (fn, _) in enumerate(ordered[:len(labels)]):
-                  src = None
-                  for p in glob.glob(os.path.join(out, "**", fn), recursive=True):
-                      src = p; break
-                  if src: shutil.copy(src, os.path.join(dest, labels[i] + ".png"))
-          # Fallback: positional sorted (best-effort if manifest parsing failed).
+                  hits = glob.glob(os.path.join(out, "**", fn), recursive=True)
+                  if hits: shutil.copy(hits[0], os.path.join(dest, labels[i] + ".png"))
           if len(os.listdir(dest)) < len(labels):
               for f in os.listdir(dest): os.remove(os.path.join(dest, f))
-              pngs = sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))
-              for i, p in enumerate(pngs):
+              for i, p in enumerate(sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))):
                   if i >= len(labels): break
                   shutil.copy(p, os.path.join(dest, labels[i] + ".png"))
           print("Staged:", sorted(os.listdir(dest)))
           PY
           ls -R gallery || true
-        env:
-          DEV: ${{ steps.devname.outputs.name }}
 
-      - name: Upload device screenshots
+      - name: Upload screenshots
         uses: actions/upload-artifact@v4
         with:
-          name: shots-${{ steps.devname.outputs.name }}
+          name: shots-${{ matrix.label }}
           path: gallery/devices/
-          if-no-files-found: warn
+          if-no-files-found: error
 
   publish:
     needs: capture
@@ -145,24 +145,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all device artifacts
+      - name: Download device artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: shots-*
           merge-multiple: true
 
-      - name: Assemble gallery + device frames
+      - name: Assemble gallery
         run: |
           mkdir -p gallery/img
           cp -r artifacts/* gallery/img/ 2>/dev/null || true
-          python3 .github/scripts/build_gallery.py gallery
-          echo "todo.firashome.uk" > gallery/CNAME
+          COUNT=$(find gallery/img -name "*.png" | wc -l)
+          echo "Screenshot count: $COUNT"
+          echo "count=$COUNT" >> "$GITHUB_ENV"
+          if [ "$COUNT" -gt 0 ]; then
+            python3 .github/scripts/build_gallery.py gallery
+            echo "todo.firashome.uk" > gallery/CNAME
+          fi
 
       - name: Upload Pages artifact
+        if: env.count != '0'
         uses: actions/upload-pages-artifact@v3
         with:
           path: gallery
 
       - name: Deploy to GitHub Pages
+        if: env.count != '0'
         uses: actions/deploy-pages@v4
+
+      - name: Skip deploy (no screenshots — keeping live gallery intact)
+        if: env.count == '0'
+        run: echo "No screenshots captured this run; live gallery left untouched."
