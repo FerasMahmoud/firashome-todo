@@ -296,37 +296,15 @@ struct ProjectDetailView: View {
         let cal = Calendar.current
 
         let active: [TodoTask] = [
-            TodoTask(
-                title: "Review Q3 drone proposal with Firas",
-                priority: 1, order: 0, project: work,
-                dueDate: now
-            ),
-            TodoTask(
-                title: "Send weekly status report",
-                priority: 2, order: 1, project: work,
-                dueDate: cal.date(byAdding: .day, value: 1, to: now)
-            ),
-            TodoTask(
-                title: "Pick up groceries on the way home",
-                priority: 3, order: 2, project: home,
-                dueDate: cal.date(byAdding: .day, value: 1, to: now)
-            ),
-            TodoTask(
-                title: "Read SAM3 architecture paper",
-                priority: 4, order: 3, project: work
-            )
+            TodoTask(title: "Review Q3 drone proposal with Firas", dueDate: now, priority: 1, order: 0, project: work),
+            TodoTask(title: "Send weekly status report", dueDate: cal.date(byAdding: .day, value: 1, to: now) ?? now, priority: 2, order: 1, project: work),
+            TodoTask(title: "Pick up groceries on the way home", dueDate: cal.date(byAdding: .day, value: 1, to: now) ?? now, priority: 3, order: 2, project: home),
+            TodoTask(title: "Read SAM3 architecture paper", priority: 4, order: 3, project: work)
         ]
 
         let done: [TodoTask] = [
-            TodoTask(
-                title: "Walk the dog before it gets dark",
-                priority: 1, order: 4, project: home,
-                dueDate: cal.date(byAdding: .day, value: -1, to: now)
-            ),
-            TodoTask(
-                title: "Archive old screenshots",
-                priority: 4, order: 5, project: work
-            )
+            TodoTask(title: "Walk the dog before it gets dark", dueDate: cal.date(byAdding: .day, value: -1, to: now) ?? now, priority: 1, order: 4, project: home),
+            TodoTask(title: "Archive old screenshots", priority: 4, order: 5, project: work)
         ]
 
         for t in active { ctx.insert(t) }
