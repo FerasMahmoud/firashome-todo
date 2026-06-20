@@ -36,15 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - label: "iPhone"
-            pick: "iPhone"
-            kind: "phone"
-          - label: "iPad"
-            pick: "iPad"
-            kind: "tablet"
-    # Fast path: push only renders the iPhone. Manual full=true renders both.
-    if: ${{ (github.event_name != 'push') || (matrix.label == 'iPhone') || (github.event.inputs.full == 'true') }}
+        device: ${{ (github.event.inputs.full == 'true') && fromJson('[{"label":"iPhone","pick":"iPhone"},{"label":"iPad","pick":"iPad"}]') || fromJson('[{"label":"iPhone","pick":"iPhone"}]') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,10 +44,10 @@ jobs:
         id: sim
         run: |
           name=$(xcrun simctl list devices available -j \
-            | jq -r '.devices | to_entries[] | .value[] | select(.isAvailable and (.name | test("${{ matrix.pick }}"))) | .name' \
+            | jq -r '.devices | to_entries[] | .value[] | select(.isAvailable and (.name | test("${{ matrix.device.pick }}"))) | .name' \
             | head -1)
           echo "Using simulator: $name"
-          if [ -z "$name" ]; then echo "No ${{ matrix.pick }} simulator available"; exit 1; fi
+          if [ -z "$name" ]; then echo "No ${{ matrix.device.pick }} simulator available"; exit 1; fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
 
       - name: Cache Homebrew (xcodegen)
@@ -85,14 +77,14 @@ jobs:
             -scheme Todo \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -only-testing:TodoScreenshotTests/ScreenshotTests \
-            -resultBundlePath "results/${{ matrix.label }}.xcresult" \
+            -resultBundlePath "results/${{ matrix.device.label }}.xcresult" \
             -derivedDataPath build
 
       - name: Export attachments
         run: |
           mkdir -p out
           xcrun xcresulttool export attachments \
-            --path "results/${{ matrix.label }}.xcresult" \
+            --path "results/${{ matrix.device.label }}.xcresult" \
             --output-path "out"
 
       - name: Stage + friendly-rename screenshots (preserve capture order)
@@ -100,7 +92,7 @@ jobs:
           python3 - <<'PY'
           import json, os, shutil, glob
           out = "out"
-          dest = f"gallery/devices/${{ matrix.label }}"
+          dest = f"gallery/devices/${{ matrix.device.label }}"
           os.makedirs(dest, exist_ok=True)
           labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
           ordered = []
@@ -135,7 +127,7 @@ jobs:
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
         with:
-          name: shots-${{ matrix.label }}
+          name: shots-${{ matrix.device.label }}
           path: gallery/devices/
           if-no-files-found: error
 
