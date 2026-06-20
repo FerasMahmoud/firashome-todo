@@ -107,7 +107,9 @@ struct TodayView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(TK.canvas)
+        .background {
+            if TK.isDarkGlass { PlanetLayer() } else { TK.canvas }
+        }
     }
 
     private var emptyState: some View {
