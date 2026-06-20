@@ -34,8 +34,6 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_CFBundleDisplayName: Tasks
         ENABLE_PREVIEWS: YES
-    dependencies:
-      - target: TodoWidgets
     info:
       path: Support/Info.plist
       properties:
