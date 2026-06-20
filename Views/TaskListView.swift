@@ -51,7 +51,7 @@ struct TaskListView: View {
                     Button(role: .destructive) {
                         Repository.delete(task, in: context)
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        HStack { Image(systemName: "trash"); Text("Delete") }
                     }
                     .tint(TK.accent)
                     .accessibilityIdentifier("task-row-delete")
@@ -60,12 +60,12 @@ struct TaskListView: View {
                     Button {
                         Repository.toggle(task, in: context)
                     } label: {
-                        Label(
-                            task.isCompleted ? "Undo" : "Complete",
-                            systemImage: task.isCompleted
+                        HStack {
+                            Image(systemName: task.isCompleted
                                 ? "arrow.uturn.backward.circle"
-                                : "checkmark.circle.fill"
-                        )
+                                : "checkmark.circle.fill")
+                            Text(task.isCompleted ? "Undo" : "Complete")
+                        }
                     }
                     // Todoist-complete green — kept inline so we don't widen the global TK palette.
                     .tint(Color(red: 0.18, green: 0.69, blue: 0.34))

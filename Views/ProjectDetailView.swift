@@ -181,7 +181,7 @@ struct ProjectDetailView: View {
             Button(role: .destructive) {
                 Repository.delete(task, in: context)
             } label: {
-                Label("Delete", systemImage: "trash")
+                HStack { Image(systemName: "trash"); Text("Delete") }
             }
             .accessibilityIdentifier("project-swipe-delete-\(task.id.uuidString.prefix(8))")
         }
@@ -189,10 +189,10 @@ struct ProjectDetailView: View {
             Button {
                 Repository.toggle(task, in: context)
             } label: {
-                Label(
-                    task.isCompleted ? "Undo" : "Complete",
-                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
-                )
+                HStack {
+                    Image(systemName: task.isCompleted ? "arrow.uturn.backward" : "checkmark")
+                    Text(task.isCompleted ? "Undo" : "Complete")
+                }
             }
             .tint(.green)
             .accessibilityIdentifier("project-swipe-complete-\(task.id.uuidString.prefix(8))")

@@ -40,7 +40,7 @@ struct FocusActivityWidget: Widget {
             DynamicIsland {
                 // Expanded
                 DynamicIslandExpandedRegion(.leading) {
-                    Label("Focus", systemImage: "checklist")
+                    HStack { Image(systemName: "checklist"); Text("Focus") }
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(TK.secondary)
                         .padding(.leading, 4)

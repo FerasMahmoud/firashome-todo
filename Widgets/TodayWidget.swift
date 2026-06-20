@@ -59,7 +59,7 @@ struct TodayWidgetView: View {
                 .foregroundStyle(TK.secondary)
             Spacer()
             if entry.snapshot.overdueCount > 0 {
-                Label("\(entry.snapshot.overdueCount) overdue", systemImage: "exclamationmark.circle")
+                HStack { Image(systemName: "exclamationmark.circle"); Text("\(entry.snapshot.overdueCount) overdue") }
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(TK.accent)
             }
@@ -113,13 +113,13 @@ struct TodayWidgetView: View {
             }
             Divider()
             if let next = entry.snapshot.nextTaskTitle {
-                Label(next, systemImage: "circle")
+                HStack { Image(systemName: "circle"); Text(next) }
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(TK.ink)
                     .lineLimit(2)
             }
             if entry.snapshot.overdueCount > 0 {
-                Label("\(entry.snapshot.overdueCount) overdue", systemImage: "exclamationmark.triangle.fill")
+                HStack { Image(systemName: "exclamationmark.triangle.fill"); Text("\(entry.snapshot.overdueCount) overdue") }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(TK.accent)
             }
