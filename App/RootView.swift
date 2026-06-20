@@ -42,14 +42,14 @@ struct RootView: View {
     }
 
     var body: some View {
-        ZStack {
-            planetBackground
+        Group {
             if let screen = screenshotScreen {
                 screenshotBody(screen)
             } else {
                 splitBody
             }
         }
+        .background(planetBackground)
         .colorScheme(TK.isDarkGlass ? .dark : .light)
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
