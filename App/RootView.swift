@@ -56,6 +56,8 @@ struct RootView: View {
     private func screenshotBody(_ screen: String) -> some View {
         if screen == "quickadd" {
             QuickAddView()
+        } else if screen == "taskdetail" {
+            ScreenshotTaskDetail()
         } else {
             NavigationStack {
                 detailView(NavDestination(screen: screen) ?? .today)
@@ -161,4 +163,20 @@ struct AddTaskBar: View {
 #Preview {
     RootView()
         .modelContainer(for: [TodoTask.self, Project.self, Label.self], inMemory: true)
+}
+
+/// Screenshot helper: renders TaskDetailView with the first seeded task (shows subtasks).
+struct ScreenshotTaskDetail: View {
+    @Query(filter: #Predicate<TodoTask> { $0.completedAt == nil })
+    private var tasks: [TodoTask]
+
+    var body: some View {
+        NavigationStack {
+            if let task = tasks.first(where: { $0.title == "Review Qiddiya drone survey brief" }) ?? tasks.first {
+                TaskDetailView(task: task)
+            } else {
+                Text("No task").foregroundStyle(TK.secondary)
+            }
+        }
+    }
 }
