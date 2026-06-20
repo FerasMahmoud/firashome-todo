@@ -87,38 +87,37 @@ jobs:
             --path "results/${{ matrix.device.label }}.xcresult" \
             --output-path "out"
 
-      - name: Stage + friendly-rename screenshots (preserve capture order)
+      - name: Stage + friendly-rename screenshots
         run: |
           python3 - <<'PY'
           import json, os, shutil, glob
           out = "out"
           dest = f"gallery/devices/${{ matrix.device.label }}"
           os.makedirs(dest, exist_ok=True)
-          labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
-          ordered = []
+          # xcresulttool manifest maps exportedFileName (UUID) -> suggestedHumanReadableName,
+          # whose prefix IS our attachment name, e.g. "06-quickadd_0_<uuid>.png".
           mani = os.path.join(out, "manifest.json")
+          pairs = []  # (exportedFileName, label)
           if os.path.exists(mani):
-              try: raw = json.load(open(mani))
-              except Exception: raw = None
+              raw = json.load(open(mani))
               def walk(o):
                   if isinstance(o, dict):
-                      name = o.get("name") or o.get("suggestedName") or o.get("attachmentName")
-                      path = o.get("exportPath") or o.get("path") or o.get("file") or o.get("fileName")
-                      if name and path and str(path).endswith(".png"):
-                          ordered.append((os.path.basename(path), name))
+                      fn = o.get("exportedFileName")
+                      hr = o.get("suggestedHumanReadableName")
+                      if fn and hr:
+                          label = hr.split("_0_")[0]  # "06-quickadd"
+                          pairs.append((fn, label))
                       for v in o.values(): walk(v)
                   elif isinstance(o, list):
                       for v in o: walk(v)
-              if raw is not None: walk(raw)
-          print("manifest entries (ordered):", ordered)
-          if os.path.exists(mani):
-              print("MANIFEST RAW:", open(mani).read()[:3000])
-          if len(ordered) >= len(labels):
-              for i, (fn, _) in enumerate(ordered[:len(labels)]):
-                  hits = glob.glob(os.path.join(out, "**", fn), recursive=True)
-                  if hits: shutil.copy(hits[0], os.path.join(dest, labels[i] + ".png"))
-          if len(os.listdir(dest)) < len(labels):
-              for f in os.listdir(dest): os.remove(os.path.join(dest, f))
+              walk(raw)
+          for fn, label in pairs:
+              hits = glob.glob(os.path.join(out, "**", fn), recursive=True)
+              if hits:
+                  shutil.copy(hits[0], os.path.join(dest, label + ".png"))
+          # Fallback if manifest parsing produced nothing.
+          if len(os.listdir(dest)) == 0:
+              labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
               for i, p in enumerate(sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))):
                   if i >= len(labels): break
                   shutil.copy(p, os.path.join(dest, labels[i] + ".png"))
