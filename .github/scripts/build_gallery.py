@@ -8,12 +8,19 @@ import sys
 import html
 from pathlib import Path
 
-DEVICE_LABELS = {
-    "iphone-17-pro-max": ("iPhone 17 Pro Max", "phone"),
-    "iphone-17-pro": ("iPhone 17 Pro", "phone"),
-    "ipad-pro-13-inch-m4": ("iPad Pro 13″ (M4)", "tablet"),
-    "ipad-mini-a17-pro": ("iPad mini (A17 Pro)", "tablet"),
-}
+DEVICE_LABELS = [
+    ("pro max", ("iPhone 16 Pro Max", "phone")),
+    ("iphone", ("iPhone 16 Pro", "phone")),
+    ("mini", ("iPad mini (A17 Pro)", "tablet")),
+    ("ipad", ("iPad Pro 13″ (M4)", "tablet")),
+]
+
+def label_for(folder_name: str):
+    n = folder_name.lower()
+    for needle, (label, kind) in DEVICE_LABELS:
+        if needle in n:
+            return label, kind
+    return folder_name, "phone"
 
 def main():
     root = Path(sys.argv[1])
@@ -28,7 +35,7 @@ def main():
 
     cards = []
     for slug, pngs in devices.items():
-        label, kind = DEVICE_LABELS.get(slug, (slug, "phone"))
+        label, kind = label_for(slug)
         for png in pngs:
             data = base64.b64encode(png.read_bytes()).decode()
             cls = "frame tablet" if kind == "tablet" else "frame"
