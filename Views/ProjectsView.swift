@@ -81,7 +81,7 @@ struct ProjectsView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .listRowBackground(GlassRowBg())
+        
         .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
         .listRowSeparator(.hidden)
             

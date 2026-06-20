@@ -29,6 +29,17 @@ struct TaskRowView: View {
             trailingFlag
         }
         .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .background {
+            if TK.isDarkGlass {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                    )
+            }
+        }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
