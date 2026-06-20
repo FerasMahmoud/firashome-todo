@@ -16,20 +16,36 @@ struct QuickAddView: View {
     @FocusState private var titleFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            handle
+        NavigationStack {
+            VStack(spacing: 0) {
+                handle
 
-            titleField
+                titleField
 
-            controls
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                controls
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
 
-            Spacer(minLength: 16)
-
-            actions
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                Spacer(minLength: 16)
+            }
+            .background(TK.canvas)
+            .toolbar {
+                // Todoist quick-add chrome: Cancel (left), Add task (right, red).
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(TK.secondary)
+                        .accessibilityIdentifier("quick-add-cancel")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: addTask) {
+                        Text("Add task")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(canAdd ? TK.accent : TK.secondary)
+                    }
+                    .disabled(!canAdd)
+                    .accessibilityIdentifier("quick-add-add")
+                }
+            }
         }
         .background(TK.canvas)
         .presentationDetents([.medium, .large])
@@ -93,37 +109,6 @@ struct QuickAddView: View {
             dateMenu
             priorityMenu
             Spacer(minLength: 0)
-        }
-    }
-
-    private var actions: some View {
-        HStack(spacing: 12) {
-            Button(role: .cancel) {
-                dismiss()
-            } label: {
-                Text("Cancel")
-                    .font(TK.headline)
-                    .foregroundStyle(TK.ink)
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(
-                        TK.grouped,
-                        in: RoundedRectangle(cornerRadius: TK.rRow, style: .continuous)
-                    )
-            }
-            .accessibilityIdentifier("quick-add-cancel")
-
-            Button(action: addTask) {
-                Text("Add task")
-                    .font(TK.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(
-                        canAdd ? TK.accent : TK.secondary,
-                        in: RoundedRectangle(cornerRadius: TK.rRow, style: .continuous)
-                    )
-            }
-            .disabled(!canAdd)
-            .accessibilityIdentifier("quick-add-add")
         }
     }
 
