@@ -50,7 +50,7 @@ final class AuthManager: ObservableObject {
                 order: $0.order, due_date: iso($0.dueDate), completed_at: iso($0.completedAt),
                 project_id: $0.project?.id.uuidString, label_ids: $0.labels.map(\.id.uuidString)) }
             let pushProjects = projects.map { SyncClient.ProjectDTO(
-                id: $0.id.uuidString, name: $0.name, color_hex: $0.color_hex, order: $0.order, is_favorite: $0.isFavorite) }
+                id: $0.id.uuidString, name: $0.name, color_hex: $0.colorHex, order: $0.order, is_favorite: $0.isFavorite) }
             let pushLabels = labels.map { SyncClient.LabelDTO(id: $0.id.uuidString, name: $0.name, color_hex: $0.colorHex) }
             let resp = try await client.push(tasks: pushTasks, projects: pushProjects, labels: pushLabels)
             // Pull: upsert remote tasks into local store by id.
