@@ -1,29 +1,23 @@
 name: TestFlight
-
-# Builds a signed .ipa on a free macOS runner and uploads to TestFlight.
-# PUBLIC repo = free macOS runners. Requires 3 repo secrets:
-#   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (.p8 body)
-
 on:
   workflow_dispatch:
   push:
     tags: ["v*"]
-
 jobs:
   testflight:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Install tooling
         run: brew install xcodegen fastlane
-
       - name: Generate Xcode project
         run: xcodegen generate
-
-      - name: Build & upload to TestFlight
+      - name: Build, sign & upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTH }}
         run: fastlane beta

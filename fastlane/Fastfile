@@ -4,18 +4,34 @@ lane :beta do
   api_key = app_store_connect_api_key(
     key_id: ENV["ASC_KEY_ID"],
     issuer_id: ENV["ASC_ISSUER_ID"],
-    key_content: ENV["ASC_KEY"],          # PEM content passed directly (no file dependency)
+    key_content: ENV["ASC_KEY"],
     in_house: false,
     duration: 1_200
   )
 
-  begin
-    produce(api_key: api_key, app_identifier: "uk.firashome.todo",
-            app_name: "Tasks", skip_screenshots: true, skip_metadata: true)
-  rescue => e
-    UI.important("produce skipped (likely exists): #{e.message}")
-  end
+  # Create/fetch distribution cert + provisioning profile (creates the App ID too).
+  # First run creates; readonly:false so it provisions on a fresh account.
+  match(
+    type: "appstore",
+    app_identifier: "uk.firashome.todo",
+    api_key: api_key,
+    readonly: false
+  )
 
-  pilot(api_key: api_key, app_identifier: "uk.firashome.todo",
-        skip_waiting_for_build_processing: true, skip_submission: true)
+  # Build + sign an App Store .ipa
+  gym(
+    scheme: "Todo",
+    project: "Todo.xcodeproj",
+    export_method: "app-store",
+    clean: true,
+    include_bitcode: false
+  )
+
+  # Upload to TestFlight
+  pilot(
+    api_key: api_key,
+    app_identifier: "uk.firashome.todo",
+    skip_waiting_for_build_processing: true,
+    skip_submission: true
+  )
 end
