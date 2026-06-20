@@ -64,3 +64,17 @@ struct FrostedGlassBg: View {
         }
     }
 }
+
+/// Glass row background: visible translucent gradient card (simulates frosted glass).
+struct GlassRowBg: View {
+    var body: some View {
+        if TK.isDarkGlass {
+            LinearGradient(
+                colors: [Color.white.opacity(0.09), Color.white.opacity(0.04)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        } else {
+            TK.canvas
+        }
+    }
+}
