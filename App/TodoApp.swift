@@ -9,8 +9,7 @@ struct TodoApp: App {
         let schema = Schema([TodoTask.self, Project.self, Label.self])
         let config = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false,
-            groupContainer: .identifier("group.uk.firashome.todo")
+            isStoredInMemoryOnly: false
         )
         do {
             container = try ModelContainer(for: schema, configurations: [config])
