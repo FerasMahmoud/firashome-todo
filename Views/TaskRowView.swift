@@ -33,10 +33,10 @@ struct TaskRowView: View {
         .background {
             if TK.isDarkGlass {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white.opacity(0.10))
+                    .fill(Color.white.opacity(0.14))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
                     )
             }
         }

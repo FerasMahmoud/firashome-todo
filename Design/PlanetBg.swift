@@ -15,8 +15,8 @@ struct PlanetLayer: View {
             Image(uiImage: img)
                 .resizable()
                 .scaledToFill()
-                .brightness(-0.18)
-                .overlay(Color.black.opacity(0.35))
+                .brightness(-0.05)
+                .overlay(Color.black.opacity(0.10))
                 .ignoresSafeArea()
         }
     }
