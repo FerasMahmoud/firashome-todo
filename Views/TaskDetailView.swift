@@ -166,7 +166,7 @@ struct TaskDetailView: View {
                     task.project = nil
                     persist()
                 } label: {
-                    Label { Text("Inbox") } icon: { Image(systemName: "tray") }
+                    HStack(spacing: 6) { Image(systemName: "tray"); Text("Inbox") }
                 }
                 if !projects.isEmpty {
                     Divider()
