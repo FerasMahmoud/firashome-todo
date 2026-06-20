@@ -87,7 +87,6 @@ jobs:
       - name: Stage + friendly-rename screenshots
         run: |
           mkdir -p "gallery/devices/${{ steps.devname.outputs.name }}"
-          # Screenshots export with UUID filenames; rename to friendly page names by manifest.
           python3 - <<'PY'
           import json, os, shutil, glob
           dev = os.environ["DEV"]
@@ -95,31 +94,35 @@ jobs:
           dest = f"gallery/devices/{dev}"
           os.makedirs(dest, exist_ok=True)
           labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
-          # Try manifest mapping (UUID file -> attachment name) first.
-          mapping = {}
+          # Collect attachment (filename, name) pairs from the manifest IN DOCUMENT ORDER
+          # (= capture order). xcresulttool writes UUID filenames, so sorting by name
+          # scrambles them; the manifest preserves order.
+          ordered = []
           mani = os.path.join(out, "manifest.json")
           if os.path.exists(mani):
-              try:
-                  raw = json.load(open(mani))
-              except Exception:
-                  raw = None
+              try: raw = json.load(open(mani))
+              except Exception: raw = None
               def walk(o):
                   if isinstance(o, dict):
                       name = o.get("name") or o.get("suggestedName") or o.get("attachmentName")
                       path = o.get("exportPath") or o.get("path") or o.get("file") or o.get("fileName")
-                      if name and path:
-                          mapping[os.path.basename(path)] = name
+                      if name and path and str(path).endswith(".png"):
+                          ordered.append((os.path.basename(path), name))
                       for v in o.values(): walk(v)
                   elif isinstance(o, list):
                       for v in o: walk(v)
               if raw is not None: walk(raw)
-          pngs = sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))
-          if mapping and len(mapping) >= len(pngs):
-              for p in pngs:
-                  nm = mapping.get(os.path.basename(p), os.path.basename(p))
-                  shutil.copy(p, os.path.join(dest, nm + ".png" if not nm.endswith(".png") else nm))
-          else:
-              # Fallback: positional sorted -> label.
+          print("manifest entries (ordered):", ordered)
+          if len(ordered) >= len(labels):
+              for i, (fn, _) in enumerate(ordered[:len(labels)]):
+                  src = None
+                  for p in glob.glob(os.path.join(out, "**", fn), recursive=True):
+                      src = p; break
+                  if src: shutil.copy(src, os.path.join(dest, labels[i] + ".png"))
+          # Fallback: positional sorted (best-effort if manifest parsing failed).
+          if len(os.listdir(dest)) < len(labels):
+              for f in os.listdir(dest): os.remove(os.path.join(dest, f))
+              pngs = sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))
               for i, p in enumerate(pngs):
                   if i >= len(labels): break
                   shutil.copy(p, os.path.join(dest, labels[i] + ".png"))

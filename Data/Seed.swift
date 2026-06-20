@@ -56,6 +56,11 @@ enum Seed {
         task("Read Elite CV engineer techniques", priority: 4, order: 0, project: fittech)
         task("Organize Cloudflare DNS records", order: 1, project: personal)
 
+        // Inbox — tasks with NO project (true Todoist Inbox bucket)
+        task("Brainstorm Q3 growth experiments", due: today, priority: 2, order: 6, project: nil, labels: [work])
+        task("Reply to the WhatsApp group about weekend", due: tomorrow, order: 7, project: nil)
+        task("Renew Notion subscription", priority: 3, order: 8, project: nil)
+
         [urgent, work, home, errands].forEach { context.insert($0) }
         [inbox, fittech, personal, shopping].forEach { context.insert($0) }
 

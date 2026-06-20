@@ -23,7 +23,7 @@ final class ScreenshotTests: XCTestCase {
         ]
 
         for (screen, name) in screens {
-            app.launchArguments = ["--seed-demo", "--screen=\(screen)", "-UITestScreenshotMode"]
+            app.launchArguments = ["--seed-demo", "--screen=\(screen)", "--no-focus", "-UITestScreenshotMode"]
             app.launch()
             // Give the view + SwiftData seed a moment to render.
             _ = app.windows.firstMatch.waitForExistence(timeout: 8)

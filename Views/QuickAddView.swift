@@ -34,7 +34,12 @@ struct QuickAddView: View {
         .background(TK.canvas)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.hidden)
-        .onAppear { titleFocused = true }
+        .onAppear {
+            // Skip auto-focus in screenshot mode so the keyboard doesn't cover the sheet.
+            if !ProcessInfo.processInfo.arguments.contains("--no-focus") {
+                titleFocused = true
+            }
+        }
     }
 
     // MARK: - Sections
