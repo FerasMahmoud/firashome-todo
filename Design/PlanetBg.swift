@@ -25,10 +25,6 @@ struct PlanetLayer: View {
 /// Glass row background: visible translucent gradient (simulates frosted glass cards).
 struct GlassRowBg: View {
     var body: some View {
-        if TK.isDarkGlass {
-            Color(red: 0.15, green: 0.17, blue: 0.22)
-        } else {
-            TK.canvas
-        }
+        Color(red: 0.15, green: 0.17, blue: 0.22)
     }
 }
