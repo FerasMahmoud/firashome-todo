@@ -27,6 +27,7 @@ struct UpcomingView: View {
         }
         .navigationTitle("Upcoming")
         .navigationBarTitleDisplayMode(.large)
+        .environment(\.hideRedundantDue, true)
     }
 
     // MARK: - Sections

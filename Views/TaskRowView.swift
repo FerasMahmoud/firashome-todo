@@ -14,6 +14,7 @@ struct TaskRowView: View {
     let task: TodoTask
 
     @Environment(\.modelContext) private var context
+    @Environment(\.hideRedundantDue) private var hideRedundantDue
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -43,7 +44,7 @@ struct TaskRowView: View {
             ZStack {
                 if task.isCompleted {
                     Circle()
-                        .fill(TK.accent)
+                        .fill(TK.completedFill)
                         .frame(width: 20, height: 20)
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .bold))
@@ -86,7 +87,7 @@ struct TaskRowView: View {
             if let project = task.project {
                 projectBadge(project)
             }
-            if let due = dueChip {
+            if let due = dueChip, !hideRedundantDue {
                 dueBadge(due)
             }
             Spacer(minLength: 0)

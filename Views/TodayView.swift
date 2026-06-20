@@ -39,6 +39,7 @@ struct TodayView: View {
             .background(TK.canvas)
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
+            .environment(\.hideRedundantDue, true)
     }
 
     // MARK: - Content
@@ -92,8 +93,8 @@ struct TodayView: View {
                     }
                 } header: {
                     Text("Today")
-                        .font(TK.sectionHeader)
-                        .foregroundStyle(TK.secondary)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(TK.ink)
                         .textCase(nil)
                         .accessibilityIdentifier("today-section-today")
                 }

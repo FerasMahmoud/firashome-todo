@@ -29,6 +29,9 @@ enum TK {
         }
     }
 
+    /// Muted fill for completed checkboxes — Todoist completes look neutral, not brand-red.
+    static let completedFill = Color(red: 0.83, green: 0.84, blue: 0.86)
+
     // Radii
     static let rRow: CGFloat = 12
     static let rCard: CGFloat = 16
@@ -40,6 +43,16 @@ enum TK {
     static let body = Font.system(size: 16, weight: .regular)
     static let subhead = Font.system(size: 15, weight: .regular)
     static let sectionHeader = Font.system(size: 13, weight: .medium)
+}
+
+private struct HideRedundantDueKey: EnvironmentKey { static let defaultValue: Bool = false }
+extension EnvironmentValues {
+    /// When true (Today/Upcoming views), task rows hide the "Today"/date chip —
+    /// real Todoist doesn't show a redundant date when you're already in that view.
+    var hideRedundantDue: Bool {
+        get { self[HideRedundantDueKey.self] }
+        set { self[HideRedundantDueKey.self] = newValue }
+    }
 }
 
 extension Color {
