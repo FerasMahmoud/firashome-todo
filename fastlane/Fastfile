@@ -4,7 +4,7 @@ lane :beta do
   api_key = app_store_connect_api_key(
     key_id: ENV["ASC_KEY_ID"],
     issuer_id: ENV["ASC_ISSUER_ID"],
-    key: ENV["ASC_KEY"],          # PEM content passed directly (no file dependency)
+    key_content: ENV["ASC_KEY"],          # PEM content passed directly (no file dependency)
     in_house: false,
     duration: 1_200
   )
