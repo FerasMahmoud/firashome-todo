@@ -1,30 +1,10 @@
 default_platform(:ios)
-
 lane :beta do
-  key_id = ENV["ASC_KEY_ID"]
-  p8 = "/tmp/AuthKey_#{key_id}.p8"
-  auth_args = "-allowProvisioningUpdates -authenticationKeyID #{key_id} -authenticationKeyIssuerID #{ENV['ASC_ISSUER_ID']} -authenticationKeyPath #{p8}"
-
-  gym(
-    scheme: "Todo",
-    project: "Todo.xcodeproj",
-    export_method: "app-store",
-    xcargs: auth_args,
-    clean: true,
-    include_bitcode: false
-  )
-
+  match(type: "appstore", app_identifier: "uk.firashome.todo", readonly: true)
+  gym(scheme: "Todo", project: "Todo.xcodeproj", export_method: "app-store", clean: true, include_bitcode: false)
   api_key = app_store_connect_api_key(
-    key_id: ENV["ASC_KEY_ID"],
-    issuer_id: ENV["ASC_ISSUER_ID"],
-    key_content: ENV["ASC_KEY"],
-    in_house: false,
-    duration: 1_200
-  )
-  pilot(
-    api_key: api_key,
-    app_identifier: "uk.firashome.todo",
-    skip_waiting_for_build_processing: true,
-    skip_submission: true
-  )
+    key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"],
+    key_content: ENV["ASC_KEY"], in_house: false, duration: 1_200)
+  pilot(api_key: api_key, app_identifier: "uk.firashome.todo",
+        skip_waiting_for_build_processing: true, skip_submission: true)
 end

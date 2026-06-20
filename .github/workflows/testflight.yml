@@ -10,11 +10,12 @@ jobs:
       - uses: actions/checkout@v4
       - run: brew install xcodegen fastlane
       - run: xcodegen generate
-      - name: Write API key (.p8)
-        run: printf '%s' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "/tmp/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8"
-      - name: Build, sign & upload (xcodebuild auto-provisions via API key)
+      - name: Build, sign & upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTH }}
         run: fastlane beta
