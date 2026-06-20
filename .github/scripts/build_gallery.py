@@ -9,9 +9,9 @@ import html
 from pathlib import Path
 
 DEVICE_LABELS = [
-    ("pro max", ("iPhone 16 Pro Max", "phone")),
-    ("iphone", ("iPhone 16 Pro", "phone")),
+    ("max", ("iPhone 16 Pro Max", "phone")),
     ("mini", ("iPad mini (A17 Pro)", "tablet")),
+    ("iphone", ("iPhone 16 Pro", "phone")),
     ("ipad", ("iPad Pro 13″ (M4)", "tablet")),
 ]
 
@@ -50,7 +50,7 @@ def main():
       </figure>''')
 
     devices_nav = "".join(
-        f'<button data-dev="{html.escape(k)}">{html.escape(DEVICE_LABELS.get(k,(k,))[0])}</button>'
+        f'<button data-dev="{html.escape(k)}">{html.escape(label_for(k)[0])}</button>'
         for k in devices
     )
 
