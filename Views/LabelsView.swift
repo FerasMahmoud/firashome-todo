@@ -20,7 +20,7 @@ struct LabelsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TK.canvas)
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
         .navigationTitle("Labels")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -84,7 +84,7 @@ struct LabelsView: View {
                 .padding(.horizontal, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TK.canvas)
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
     }
 
     // MARK: - Add sheet

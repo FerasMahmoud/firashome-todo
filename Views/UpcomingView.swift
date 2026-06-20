@@ -63,7 +63,7 @@ struct UpcomingView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(TK.canvas)
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
     }
 
     private var emptyState: some View {
@@ -84,7 +84,7 @@ struct UpcomingView: View {
                 .accessibilityIdentifier("upcoming-empty-subtitle")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TK.canvas)
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
     }
 
     // MARK: - Derived

@@ -180,7 +180,7 @@ struct FilterResultView: View {
                 TaskListView(tasks: filtered, header: nil)
             }
         }
-        .background(TK.canvas)
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
         .navigationTitle(kind.title)
         .navigationBarTitleDisplayMode(.large)
     }
@@ -229,7 +229,7 @@ struct FilterResultView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TK.canvas)
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
     }
 
     private var emptyTitle: String {
