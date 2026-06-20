@@ -147,7 +147,7 @@ enum FilterKind: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .priority1: TK.priority(1)
         case .overdue:   TK.accent
-        case .today:     TK.accent
+        case .today:     TK.priority(3)   // blue — distinguishes from red Priority1/Overdue (Todoist style)
         case .next7Days: TK.ink
         case .noDate:    TK.secondary
         }
