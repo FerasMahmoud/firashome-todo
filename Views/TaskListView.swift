@@ -46,7 +46,7 @@ struct TaskListView: View {
         ForEach(tasks, id: \.id) { task in
             TaskRowView(task: task)
                 .listRowBackground(TK.canvas)
-                .listRowSeparatorTint(TK.hairlineSoft)
+                .listRowSeparator(.hidden)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         Repository.delete(task, in: context)

@@ -176,6 +176,7 @@ struct ProjectDetailView: View {
             TaskDetailView(task: task)
         } label: {
             TaskRowView(task: task)
+            .listRowSeparator(.hidden)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
@@ -318,7 +319,6 @@ struct ProjectDetailView: View {
 }
 
 // MARK: - Preview
-
 
 
 

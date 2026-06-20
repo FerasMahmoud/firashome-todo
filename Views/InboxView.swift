@@ -23,6 +23,7 @@ struct InboxView: View {
                 Section {
                     ForEach(sorted) { task in
                         TaskRowView(task: task)
+                        .listRowSeparator(.hidden)
                     }
                 } header: {
                     Text("Tasks")

@@ -70,6 +70,7 @@ struct TodayView: View {
                 Section {
                     ForEach(overdue) { task in
                         TaskRowView(task: task)
+                            .listRowSeparator(.hidden)
                     }
                 } header: {
                     HStack(spacing: 6) {
@@ -86,16 +87,12 @@ struct TodayView: View {
                 }
             }
             if !todays.isEmpty {
+                // No "Today" section header — the large nav title already says Today (Todoist style).
                 Section {
                     ForEach(todays) { task in
                         TaskRowView(task: task)
+                            .listRowSeparator(.hidden)
                     }
-                } header: {
-                    Text("Today")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(TK.ink)
-                        .textCase(nil)
-                        .accessibilityIdentifier("today-section-today")
                 }
             }
         }
