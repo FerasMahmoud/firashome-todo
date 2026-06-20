@@ -28,21 +28,7 @@ jobs:
 
       - name: Build & upload to TestFlight
         env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
-          # Build a proper api_key.json (python handles PEM newlines safely).
-          python3 - <<'PY'
-          import json, pathlib, os
-          key = pathlib.Path.home().joinpath(f".appstoreconnect/private_keys/AuthKey_{os.environ['KEY_ID']}.p8").read_text()
-          json.dump({"key_id": os.environ["KEY_ID"], "issuer_id": os.environ["ISSUER"],
-                     "in_house": False, "key": key}, open("/tmp/api_key.json", "w"))
-          PY
-          # Create the App Store Connect record if it doesn't exist yet.
-          fastlane produce --app_identifier uk.firashome.todo --app_name "Tasks" \
-            --api_key_path /tmp/api_key.json --skip_screenshots --skip_metadata || true
-          fastlane pilot upload \
-            --app_identifier uk.firashome.todo \
-            --api_key_path /tmp/api_key.json \
-            --skip_waiting_for_build_processing \
-            --skip_submission || true
+          fastlane beta
