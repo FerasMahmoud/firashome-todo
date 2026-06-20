@@ -36,7 +36,7 @@ struct TaskListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-            .listRowBackground(GlassRowBg())
+            
         .background(TK.canvas)
     }
 

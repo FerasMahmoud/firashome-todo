@@ -109,7 +109,7 @@ struct TodayView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background {
-            GlassPlanetBg()
+            if TK.isDarkGlass { PlanetLayer() } else { TK.canvas }
         }
     }
 
