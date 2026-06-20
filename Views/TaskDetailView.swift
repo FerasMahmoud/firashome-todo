@@ -97,12 +97,8 @@ struct TaskDetailView: View {
         .accessibilityIdentifier(isDone ? "task-detail-reopen" : "task-detail-complete")
         .accessibilityLabel(isDone ? "Mark incomplete" : "Mark complete")
 
-        // Liquid Glass is iOS 26+ only; fall back to the plain button below.
-        if #available(iOS 26, *) {
-            button.glassEffect()
-        } else {
-            button
-        }
+        // Liquid Glass (iOS 26) not available in this SDK — plain button.
+        button
     }
 
     // MARK: - Title
@@ -170,7 +166,7 @@ struct TaskDetailView: View {
                     task.project = nil
                     persist()
                 } label: {
-                    Label("Inbox", systemImage: "tray")
+                    Label { Text("Inbox") } icon: { Image(systemName: "tray") }
                 }
                 if !projects.isEmpty {
                     Divider()
