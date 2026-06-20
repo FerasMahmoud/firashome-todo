@@ -145,7 +145,7 @@ struct AddTaskBar: View {
             .padding(.horizontal, 22)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
-            .background(TK.canvas)
+            .glassBar()
             .overlay(alignment: .top) {
                 Rectangle()
                     .fill(TK.hairlineSoft)

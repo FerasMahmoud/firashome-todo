@@ -14,6 +14,10 @@ struct TodayView: View {
     @Query(filter: #Predicate<TodoTask> { $0.completedAt == nil })
     private var openTasks: [TodoTask]
 
+    /// Tasks completed today (for the progress ring).
+    @Query(filter: #Predicate<TodoTask> { $0.completedAt != nil })
+    private var completedTasks: [TodoTask]
+
     // Cached at init so the list view is cheap to recompute when the query
     // refreshes. `Date.now` and `Calendar.current` would otherwise re-evaluate
     // on every body invocation.
@@ -58,6 +62,11 @@ struct TodayView: View {
                     .padding(.top, 4)
                     .padding(.bottom, 8)
                     .accessibilityIdentifier("today-date-subtitle")
+
+                // Glassy progress ring.
+                ProgressRing(done: doneToday, total: todays.count + doneToday)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
 
                 taskList
             }
@@ -152,6 +161,11 @@ struct TodayView: View {
                 if lhs.priority != rhs.priority { return lhs.priority < rhs.priority }
                 return lhs.order < rhs.order
             }
+    }
+
+    /// Tasks completed today (for the progress ring).
+    private var doneToday: Int {
+        completedTasks.filter { Calendar.current.isDateInToday($0.completedAt ?? .distantPast) }.count
     }
 }
 
