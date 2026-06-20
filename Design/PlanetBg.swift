@@ -26,17 +26,7 @@ struct PlanetLayer: View {
 struct GlassRowBg: View {
     var body: some View {
         if TK.isDarkGlass {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.16), Color.white.opacity(0.09)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.14), lineWidth: 0.5)
-                )
+            Color(red: 0.15, green: 0.17, blue: 0.22)
         } else {
             TK.canvas
         }
