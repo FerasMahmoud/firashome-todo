@@ -20,6 +20,7 @@ final class ScreenshotTests: XCTestCase {
             ("filters", "04-filters"),
             ("projects", "05-projects"),
             ("quickadd", "06-quickadd"),
+            ("account", "07-account"),
         ]
 
         for (screen, name) in screens {

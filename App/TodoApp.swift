@@ -31,6 +31,7 @@ struct TodoApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environmentObject(AuthManager())
         }
         .modelContainer(container)
     }

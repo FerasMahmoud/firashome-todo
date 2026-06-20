@@ -117,7 +117,7 @@ jobs:
                   shutil.copy(hits[0], os.path.join(dest, label + ".png"))
           # Fallback if manifest parsing produced nothing.
           if len(os.listdir(dest)) == 0:
-              labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd"]
+              labels = ["01-today","02-inbox","03-upcoming","04-filters","05-projects","06-quickadd","07-account"]
               for i, p in enumerate(sorted(glob.glob(os.path.join(out, "**", "*.png"), recursive=True))):
                   if i >= len(labels): break
                   shutil.copy(p, os.path.join(dest, labels[i] + ".png"))

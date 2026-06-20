@@ -9,6 +9,7 @@ enum NavDestination: Hashable {
     case filters
     case projects
     case labels
+    case account
     case project(UUID)
 }
 
@@ -103,6 +104,7 @@ struct RootView: View {
         case .filters:         FiltersView()
         case .projects:        ProjectsView()
         case .labels:          LabelsView()
+        case .account:         AccountView()
         case .project(let id): ProjectDetailView(projectID: id)
         }
     }
@@ -117,6 +119,7 @@ extension NavDestination {
         case "filters":  self = .filters
         case "projects": self = .projects
         case "labels":   self = .labels
+        case "account":  self = .account
         default:         return nil
         }
     }

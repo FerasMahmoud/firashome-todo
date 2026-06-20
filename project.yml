@@ -27,6 +27,7 @@ targets:
       - path: Models
       - path: Data
       - path: Views
+      - path: Sync
       - path: Shared
       - path: Support
     settings:
