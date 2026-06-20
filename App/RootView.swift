@@ -50,7 +50,7 @@ struct RootView: View {
             }
         }
         .background(planetBackground)
-        .colorScheme(TK.isDarkGlass ? .dark : .light)
+        .preferredColorScheme(TK.isDarkGlass ? .dark : .light)
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
             if args.contains("--theme=darkglass") {
