@@ -4,7 +4,7 @@ import Foundation
 /// keeps working locally via SwiftData; this layer pushes/pulls on demand.
 /// Default backend is the Tailscale-Funnel public URL.
 struct SyncClient {
-    static let defaultBaseURL = "https://wsl.tail1ed063.ts.net"
+    static let defaultBaseURL = "https://firashome-tasks-api.fly.dev"
 
     let baseURL: String
     let token: String?
