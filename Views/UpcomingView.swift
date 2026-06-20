@@ -63,7 +63,7 @@ struct UpcomingView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-            .listRowBackground { if TK.isDarkGlass { Rectangle().fill(.thinMaterial) } else { TK.canvas } }
+            .listRowBackground(GlassRowBg())
         .background { GlassPlanetBg() }
     }
 

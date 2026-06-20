@@ -37,3 +37,14 @@ struct GlassPlanetBg: View {
         }
     }
 }
+
+/// Row background: frosted glass (thinMaterial) in dark glass, solid canvas in light.
+struct GlassRowBg: View {
+    var body: some View {
+        if TK.isDarkGlass {
+            Rectangle().fill(.thinMaterial)
+        } else {
+            TK.canvas
+        }
+    }
+}
