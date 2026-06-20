@@ -9,11 +9,21 @@ struct AccountView: View {
     @State private var password = ""
     @State private var name = ""
     @State private var mode: Mode = .login
+    @ObservedObject private var theme = ThemeManager.shared
 
     private enum Mode: String, CaseIterable { case login = "Sign in", register = "Create account" }
 
     var body: some View {
         Form {
+            Section("Theme") {
+                Picker("Appearance", selection: $theme.raw) {
+                    ForEach(AppTheme.allCases, id: \.rawValue) { t in
+                        Text(t.label).tag(t.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("theme-picker")
+            }
             Section("Backend") {
                 TextField("API URL", text: $auth.baseURL)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()

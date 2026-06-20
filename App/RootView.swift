@@ -17,6 +17,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @State private var selection: NavDestination? = .today
     @State private var showingQuickAdd = false
+    @ObservedObject private var theme = ThemeManager.shared
 
     /// When launched with `--screen=<id>` (screenshot mode), render that screen
     /// full-screen deterministically — bypassing the split-view so the UITest
@@ -27,11 +28,32 @@ struct RootView: View {
             .replacingOccurrences(of: "--screen=", with: "")
     }
 
+    /// Dimmed planet background — shows behind transparent (dark glass) content.
+    @ViewBuilder
+    private var planetBackground: some View {
+        if TK.isDarkGlass {
+            Image("planet")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+                .brightness(-0.3)
+                .overlay(Color.black.opacity(0.35).ignoresSafeArea())
+        }
+    }
+
     var body: some View {
-        if let screen = screenshotScreen {
-            screenshotBody(screen)
-        } else {
-            splitBody
+        ZStack {
+            planetBackground
+            if let screen = screenshotScreen {
+                screenshotBody(screen)
+            } else {
+                splitBody
+            }
+        }
+        .onAppear {
+            if ProcessInfo.processInfo.arguments.contains("--theme=darkglass") {
+                ThemeManager.shared.raw = AppTheme.darkGlass.rawValue
+            }
         }
     }
 

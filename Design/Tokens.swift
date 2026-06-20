@@ -1,43 +1,56 @@
 import SwiftUI
 
-/// Design tokens — light Todoist-style theme. Restrained, one accent.
-/// Per brand rule [[feedback_premium_apple_simple]]: minimal color, one type system.
+/// Design tokens — theme-aware. Colors read from ThemeManager so the whole app
+/// re-skins (light Todoist-style <-> Dark Glass brand) on toggle.
 enum TK {
+    private static var tc: ThemeColors {
+        ThemeManager.shared.current == .darkGlass ? .darkGlass : .light
+    }
+    static var isDarkGlass: Bool { ThemeManager.shared.current == .darkGlass }
+
     // Surfaces
-    static let canvas = Color.white
-    static let grouped = Color(red: 0.949, green: 0.949, blue: 0.969)   // #F2F2F7 systemGroupedBackground
-    static let card = Color.white
+    static var canvas: Color { tc.canvas }
+    static var grouped: Color { tc.grouped }
+    static var card: Color { tc.card }
 
     // Text
-    static let ink = Color(red: 0.102, green: 0.102, blue: 0.102)       // #1A1A1A
-    static let secondary = Color(red: 0.557, green: 0.557, blue: 0.576) // #8E8E93
+    static var ink: Color { tc.ink }
+    static var secondary: Color { tc.secondary }
 
     // Lines
-    static let hairline = Color(red: 0.855, green: 0.855, blue: 0.878)
-    static let hairlineSoft = Color(white: 0.92)
+    static var hairline: Color { tc.hairline }
+    static var hairlineSoft: Color { tc.hairlineSoft }
 
-    // Accent (single) — Todoist signature red (#DC4C4E)
-    static let accent = Color(red: 0.863, green: 0.298, blue: 0.306)    // #DC4C4E
+    // Accent
+    static var accent: Color { tc.accent }
 
-    // Priority colors
+    // Completed checkbox fill
+    static var completedFill: Color { tc.completedFill }
+
+    // Priority colors — light uses red/orange/blue; dark glass is monochrome (opacity steps)
     static func priority(_ p: Int) -> Color {
+        if ThemeManager.shared.current == .darkGlass {
+            switch p {
+            case 1: return .white
+            case 2: return Color(white: 1, opacity: 0.72)
+            case 3: return Color(white: 1, opacity: 0.5)
+            default: return Color(white: 1, opacity: 0.35)
+            }
+        }
         switch p {
         case 1: return accent
-        case 2: return Color(red: 0.976, green: 0.608, blue: 0.09)     // orange
-        case 3: return Color(red: 0.251, green: 0.447, blue: 0.831)    // blue
+        case 2: return Color(red: 0.976, green: 0.608, blue: 0.09)
+        case 3: return Color(red: 0.251, green: 0.447, blue: 0.831)
         default: return secondary
         }
     }
 
-    /// Muted fill for completed checkboxes — Todoist completes look neutral, not brand-red.
-    static let completedFill = Color(red: 0.83, green: 0.84, blue: 0.86)
-
-    // Radii
+    // Radii (same in both themes)
     static let rRow: CGFloat = 12
     static let rCard: CGFloat = 16
     static let rPill: CGFloat = 999
 
-    // Typography helpers
+    // Typography
     static let title = Font.system(size: 34, weight: .bold)
     static let headline = Font.system(size: 17, weight: .semibold)
     static let body = Font.system(size: 16, weight: .regular)
@@ -45,10 +58,9 @@ enum TK {
     static let sectionHeader = Font.system(size: 13, weight: .medium)
 }
 
+// Hide redundant due chip env (unchanged)
 private struct HideRedundantDueKey: EnvironmentKey { static let defaultValue: Bool = false }
 extension EnvironmentValues {
-    /// When true (Today/Upcoming views), task rows hide the "Today"/date chip —
-    /// real Todoist doesn't show a redundant date when you're already in that view.
     var hideRedundantDue: Bool {
         get { self[HideRedundantDueKey.self] }
         set { self[HideRedundantDueKey.self] = newValue }
