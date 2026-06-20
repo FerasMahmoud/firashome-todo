@@ -6,10 +6,19 @@ on:
 jobs:
   testflight:
     runs-on: macos-latest
+    env:
+      KC_NAME: build.keychain-db
+      KC_PASS: kc_pass_123
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen fastlane
       - run: xcodegen generate
+      - name: Setup a dedicated build keychain
+        run: |
+          security create-keychain -p "$KC_PASS" "$KC_NAME"
+          security default-keychain -s "$KC_NAME"
+          security unlock-keychain -p "$KC_PASS" "$KC_NAME"
+          security set-keychain-settings -u "$KC_NAME"
       - name: Build, sign & upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -18,4 +27,6 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_BASIC_AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTH }}
+          MATCH_KEYCHAIN_NAME: ${{ env.KC_NAME }}
+          MATCH_KEYCHAIN_PASSWORD: ${{ env.KC_PASS }}
         run: fastlane beta
