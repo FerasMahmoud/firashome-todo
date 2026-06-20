@@ -1,10 +1,8 @@
 name: TestFlight
 
 # Builds a signed .ipa on a free macOS runner and uploads to TestFlight.
-# Requires (as repo secrets):
-#   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (.p8)
-# Run manually until stable, then wire to push: [tags].
-# NOTE: public repo = free macOS runners. Secrets are fine in public repos.
+# PUBLIC repo = free macOS runners. Requires 3 repo secrets (see README):
+#   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (.p8 body)
 
 on:
   workflow_dispatch:
@@ -18,23 +16,34 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install tooling
-        run: |
-          brew install xcodegen fastlane
+        run: brew install xcodegen fastlane
 
-      - name: Generate project
+      - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Write API key
+      - name: Write App Store Connect API key (.p8)
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "${{ secrets.APP_STORE_CONNECT_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
+          printf '%s' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8"
 
-      - name: Build & upload
+      - name: Build & upload to TestFlight
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
+          # Build a proper api_key.json (python handles PEM newlines safely).
+          python3 - <<'PY'
+          import json, pathlib, os
+          key = pathlib.Path.home().joinpath(f".appstoreconnect/private_keys/AuthKey_{os.environ['KEY_ID']}.p8").read_text()
+          json.dump({"key_id": os.environ["KEY_ID"], "issuer_id": os.environ["ISSUER"],
+                     "in_house": False, "key": key}, open("/tmp/api_key.json", "w"))
+          PY
+          # Create the App Store Connect record if it doesn't exist yet.
+          fastlane produce --app_identifier uk.firashome.todo --name "Tasks" \
+            --api_key_path /tmp/api_key.json --skip_screenshots --skip_metadata || true
           fastlane pilot upload \
+            --app_identifier uk.firashome.todo \
             --scheme Todo \
-            --api-key-path <(jq -n '{key_id:\"'$KEY_ID'\",issuer_id:\"'$ISSUER_ID'\",in_house:false,key:\"'$(tr -d '\n' < ~/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8 | sed 's/\\/\\\\/g')'\"}') \
-            --skip_waiting_for_build_processing || true
+            --api_key_path /tmp/api_key.json \
+            --skip_waiting_for_build_processing \
+            --include_bitcode false || true
