@@ -32,8 +32,11 @@ struct InboxView: View {
                         .textCase(nil)
                 }
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
             .scrollContentBackground(.hidden)
+        .listRowBackground(GlassRowBg())
+        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .listRowSeparator(.hidden)
             
             .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
         }
