@@ -8,7 +8,10 @@ enum AppTheme: String, CaseIterable {
 /// Global theme state. Root view observes it so toggling re-renders the whole tree.
 final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
-    @AppStorage("appTheme") var raw: String = AppTheme.light.rawValue
+    @Published var raw: String {
+        didSet { UserDefaults.standard.set(raw, forKey: "appTheme") }
+    }
+    init() { raw = UserDefaults.standard.string(forKey: "appTheme") ?? AppTheme.light.rawValue }
     var current: AppTheme { AppTheme(rawValue: raw) ?? .light }
 }
 
