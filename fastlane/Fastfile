@@ -1,36 +1,21 @@
 default_platform(:ios)
 
 lane :beta do
-  key_id = ENV["ASC_KEY_ID"]
-  issuer = ENV["ASC_ISSUER_ID"]
-  key_path = File.expand_path("~/appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
-
   api_key = app_store_connect_api_key(
-    key_id: key_id,
-    issuer_id: issuer,
-    key_filepath: key_path,
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key: ENV["ASC_KEY"],          # PEM content passed directly (no file dependency)
     in_house: false,
     duration: 1_200
   )
 
-  # Create the app record in App Store Connect if it doesn't exist yet.
   begin
-    produce(
-      api_key: api_key,
-      app_identifier: "uk.firashome.todo",
-      app_name: "Tasks",
-      skip_screenshots: true,
-      skip_metadata: true
-    )
+    produce(api_key: api_key, app_identifier: "uk.firashome.todo",
+            app_name: "Tasks", skip_screenshots: true, skip_metadata: true)
   rescue => e
-    UI.important("produce skipped (likely already exists): #{e.message}")
+    UI.important("produce skipped (likely exists): #{e.message}")
   end
 
-  # Build + upload to TestFlight.
-  pilot(
-    api_key: api_key,
-    app_identifier: "uk.firashome.todo",
-    skip_waiting_for_build_processing: true,
-    skip_submission: true
-  )
+  pilot(api_key: api_key, app_identifier: "uk.firashome.todo",
+        skip_waiting_for_build_processing: true, skip_submission: true)
 end

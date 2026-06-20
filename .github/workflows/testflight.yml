@@ -1,7 +1,7 @@
 name: TestFlight
 
 # Builds a signed .ipa on a free macOS runner and uploads to TestFlight.
-# PUBLIC repo = free macOS runners. Requires 3 repo secrets (see README):
+# PUBLIC repo = free macOS runners. Requires 3 repo secrets:
 #   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (.p8 body)
 
 on:
@@ -21,14 +21,9 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Write App Store Connect API key (.p8)
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          printf '%s' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8"
-
       - name: Build & upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-        run: |
-          fastlane beta
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: fastlane beta
