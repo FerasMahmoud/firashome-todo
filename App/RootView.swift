@@ -21,17 +21,8 @@ struct RootView: View {
             SidebarView(selection: $selection)
         } detail: {
             detail
-                .toolbar {
-                    ToolbarItem(placement: .bottomBar) {
-                        Button {
-                            showingQuickAdd = true
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 30))
-                                .foregroundStyle(TK.accent)
-                        }
-                        .accessibilityLabel("Add task")
-                    }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    AddTaskBar { showingQuickAdd = true }
                 }
         }
         .tint(TK.accent)
@@ -50,6 +41,39 @@ struct RootView: View {
         case .labels:          LabelsView()
         case .project(let id): ProjectDetailView(projectID: id)
         }
+    }
+}
+
+/// Todoist's signature bottom "Add task" bar — full-width rounded row with a
+/// red ＋ and muted "Add task" label, sitting above the home indicator.
+struct AddTaskBar: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24, weight: .regular))
+                    .foregroundStyle(TK.accent)
+                Text("Add task")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(TK.secondary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 22)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(TK.canvas)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(TK.hairlineSoft)
+                    .frame(height: 0.5)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add task")
+        .accessibilityIdentifier("Add task")
     }
 }
 

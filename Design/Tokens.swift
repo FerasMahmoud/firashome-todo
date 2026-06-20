@@ -16,8 +16,8 @@ enum TK {
     static let hairline = Color(red: 0.855, green: 0.855, blue: 0.878)
     static let hairlineSoft = Color(white: 0.92)
 
-    // Accent (single) — Todoist red
-    static let accent = Color(red: 0.898, green: 0.224, blue: 0.208)    // #E53935
+    // Accent (single) — Todoist signature red (#DC4C4E)
+    static let accent = Color(red: 0.863, green: 0.298, blue: 0.306)    // #DC4C4E
 
     // Priority colors
     static func priority(_ p: Int) -> Color {

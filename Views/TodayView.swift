@@ -144,14 +144,17 @@ struct TodayView: View {
             }
     }
 
-    /// Open tasks due any time today. Sorted by manual `order`.
+    /// Open tasks due any time today. Sorted by priority (P1 first), then manual order.
     private var todays: [TodoTask] {
         openTasks
             .filter { task in
                 guard let due = task.dueDate else { return false }
                 return Calendar.current.isDateInToday(due)
             }
-            .sorted { $0.order < $1.order }
+            .sorted { lhs, rhs in
+                if lhs.priority != rhs.priority { return lhs.priority < rhs.priority }
+                return lhs.order < rhs.order
+            }
     }
 }
 
