@@ -18,6 +18,8 @@ struct TodayView: View {
     @Query(filter: #Predicate<TodoTask> { $0.completedAt != nil })
     private var completedTasks: [TodoTask]
 
+    @Environment(\.modelContext) private var ctx
+
     // Cached at init so the list view is cheap to recompute when the query
     // refreshes. `Date.now` and `Calendar.current` would otherwise re-evaluate
     // on every body invocation.
@@ -82,6 +84,7 @@ struct TodayView: View {
                         TaskRowView(task: task)
                             .listRowSeparatorTint(TK.hairlineSoft)
                     }
+                    .onMove(perform: moveOverdue)
                 } header: {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.circle.fill")
@@ -103,6 +106,7 @@ struct TodayView: View {
                         TaskRowView(task: task)
                             .listRowSeparatorTint(TK.hairlineSoft)
                     }
+                    .onMove(perform: moveToday)
                 }
             }
         }
@@ -136,6 +140,23 @@ struct TodayView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("today-empty-state")
         .accessibilityLabel("You're all clear for today. Tap + to add a task.")
+    }
+
+    // MARK: - Reorder
+
+    /// Drag-to-reorder within the Overdue section. Scoped to `overdue` so
+    /// tasks in Today (or any other view) keep their `order` untouched.
+    private func moveOverdue(from source: IndexSet, to destination: Int) {
+        var reordered = overdue
+        reordered.move(fromOffsets: source, toOffset: destination)
+        Repository.reorder(reordered, in: ctx)
+    }
+
+    /// Drag-to-reorder within the Today section.
+    private func moveToday(from source: IndexSet, to destination: Int) {
+        var reordered = todays
+        reordered.move(fromOffsets: source, toOffset: destination)
+        Repository.reorder(reordered, in: ctx)
     }
 
     // MARK: - Bucketing

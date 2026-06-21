@@ -21,12 +21,17 @@ struct TaskDetailView: View {
     /// Stored as `@State` (not derived) so the toggle can set/clear the
     /// date in a single coordinated write.
     @State private var hasDueDate: Bool
+    /// Mirrors `task.dueTime != nil` and feeds the optional reminder-time
+    /// row. Stored as `@State` (not derived) so the toggle can set/clear
+    /// the time in a single coordinated write.
+    @State private var hasDueTime: Bool
     @State private var showDeleteConfirm: Bool = false
     @State private var newSubtask: String = ""
 
     init(task: TodoTask) {
         self.task = task
         self._hasDueDate = State(initialValue: task.dueDate != nil)
+        self._hasDueTime = State(initialValue: task.dueTime != nil)
     }
 
     var body: some View {
@@ -70,8 +75,9 @@ struct TaskDetailView: View {
         .onChange(of: task.title) { _, _ in persist() }
         .onChange(of: task.note) { _, _ in persist() }
         .onChange(of: task.priority) { _, _ in persist() }
-        .onChange(of: task.dueDate) { _, _ in persist() }
-        .onChange(of: task.project) { _, _ in persist() }
+        .onChange(of: task.dueDate) { _, _ in reschedule() }
+        .onChange(of: task.dueTime) { _, _ in reschedule() }
+        .onChange(of: task.project) { _, _ in reschedule() }
         .onChange(of: hasDueDate) { _, newValue in
             if newValue {
                 if task.dueDate == nil {
@@ -79,8 +85,27 @@ struct TaskDetailView: View {
                 }
             } else {
                 task.dueDate = nil
+                // Clearing the date also clears the time (no day → no reminder).
+                if hasDueTime {
+                    hasDueTime = false
+                    task.dueTime = nil
+                }
             }
-            persist()
+            reschedule()
+        }
+        .onChange(of: hasDueTime) { _, newValue in
+            if newValue {
+                if task.dueTime == nil {
+                    // Default reminder time: 9:00am on the current day.
+                    let cal = Calendar.current
+                    let base = task.dueDate ?? .now
+                    let dayStart = cal.startOfDay(for: base)
+                    task.dueTime = cal.date(bySettingHour: 9, minute: 0, second: 0, of: dayStart)
+                }
+            } else {
+                task.dueTime = nil
+            }
+            reschedule()
         }
     }
 
@@ -316,6 +341,38 @@ struct TaskDetailView: View {
                 .datePickerStyle(.compact)
                 .tint(TK.accent)
                 .accessibilityIdentifier("task-detail-due-date")
+
+                Divider()
+                    .padding(.vertical, 2)
+
+                HStack {
+                    Toggle(isOn: $hasDueTime) {
+                        HStack(spacing: 8) {
+                            Image(systemName: hasDueTime ? "bell.fill" : "bell.slash")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(hasDueTime ? TK.accent : TK.secondary)
+                            Text(hasDueTime ? notifyLabel : "Notify me")
+                                .font(TK.body)
+                                .foregroundStyle(hasDueTime ? TK.ink : TK.secondary)
+                        }
+                    }
+                    .tint(TK.accent)
+                    .accessibilityIdentifier("task-detail-notify-toggle")
+                }
+
+                if hasDueTime {
+                    DatePicker(
+                        "Time",
+                        selection: Binding(
+                            get: { task.dueTime ?? defaultNotifyTime(on: task.dueDate) },
+                            set: { task.dueTime = $0 }
+                        ),
+                        displayedComponents: [.hourAndMinute]
+                    )
+                    .datePickerStyle(.compact)
+                    .tint(TK.accent)
+                    .accessibilityIdentifier("task-detail-notify-time")
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -360,21 +417,50 @@ struct TaskDetailView: View {
 
     private var metaFooter: some View {
         HStack(spacing: 6) {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(TK.secondary)
-                .accessibilityHidden(true)
-            Text("Created ")
-                .font(TK.sectionHeader)
-                .foregroundStyle(TK.secondary)
-            + Text(task.createdAt, format: .dateTime.day().month().year())
-                .font(TK.sectionHeader)
-                .foregroundStyle(TK.secondary)
+            HStack(spacing: 6) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(TK.secondary)
+                    .accessibilityHidden(true)
+                Text("Created ")
+                    .font(TK.sectionHeader)
+                    .foregroundStyle(TK.secondary)
+                + Text(task.createdAt, format: .dateTime.day().month().year())
+                    .font(TK.sectionHeader)
+                    .foregroundStyle(TK.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("task-detail-created")
+
+            Spacer()
+
+            subtaskProgressChip
         }
         .padding(.horizontal, 6)
         .padding(.top, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("task-detail-created")
+    }
+
+    /// Tiny progress bar + "n/m" count for the task's subtasks. Renders nothing
+    /// when there are no subtasks.
+    @ViewBuilder
+    private var subtaskProgressChip: some View {
+        let subtasks = task.subtasks
+        let total = subtasks.count
+        if total > 0 {
+            let done = subtasks.filter(\.isDone).count
+            HStack(spacing: 6) {
+                ProgressView(value: Double(done), total: Double(total))
+                    .progressViewStyle(.linear)
+                    .tint(TK.accent)
+                    .frame(width: 44, height: 4)
+                Text("\(done)/\(total)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(TK.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(done) of \(total) subtasks done")
+            .accessibilityIdentifier("task-detail-subtask-progress")
+        }
     }
 
     // MARK: - Delete
@@ -422,6 +508,26 @@ struct TaskDetailView: View {
 
     private func persist() {
         try? context.save()
+    }
+
+    /// Persist + reschedule the local notification for this task. Centralized
+    /// here so every onChange (date, time, project, completion-related flips)
+    /// keeps the reminder in sync with the current model state.
+    private func reschedule() {
+        Repository.reschedule(task, in: context)
+    }
+
+    /// Default reminder moment: 9:00am on the due date (or today).
+    private func defaultNotifyTime(on day: Date?) -> Date {
+        let cal = Calendar.current
+        let base = day ?? .now
+        return cal.date(bySettingHour: 9, minute: 0, second: 0, of: cal.startOfDay(for: base)) ?? .now
+    }
+
+    /// Short label for the notify row when a time is set, e.g. "Notify at 9:00 AM".
+    private var notifyLabel: String {
+        guard let time = task.dueTime else { return "Notify me" }
+        return "Notify at " + time.formatted(date: .omitted, time: .shortened)
     }
 }
 

@@ -57,6 +57,12 @@ struct SidebarView: View {
                          tint: TK.ink,
                          count: nil,
                          id: "nav-account")
+                smartRow(.settings,
+                         icon: "gearshape",
+                         label: "Settings",
+                         tint: TK.ink,
+                         count: nil,
+                         id: "nav-settings")
             }
 
             // Per-project rows — labeled section, one row per project.

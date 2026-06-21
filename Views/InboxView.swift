@@ -7,6 +7,16 @@ struct InboxView: View {
     @Query(filter: #Predicate<TodoTask> { $0.completedAt == nil && $0.project == nil })
     private var openTasks: [TodoTask]
 
+    @Environment(\.modelContext) private var ctx
+
+    /// Drag-to-reorder within the inbox bucket. Renumbers all inbox tasks so
+    /// the new sequence persists across the next @Query refresh.
+    private func move(from source: IndexSet, to destination: Int) {
+        var reordered = sorted
+        reordered.move(fromOffsets: source, toOffset: destination)
+        Repository.reorder(reordered, in: ctx)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Custom large title — extra leading space (28pt vs iOS default 16pt).
@@ -39,6 +49,7 @@ struct InboxView: View {
                         TaskRowView(task: task)
                         .listRowSeparatorTint(TK.hairlineSoft)
                     }
+                    .onMove(perform: move)
                 } header: {
                     Text("Tasks")
                         .font(TK.sectionHeader)

@@ -4,9 +4,10 @@ import SwiftData
 /// Project detail screen — every task that belongs to a single project.
 ///
 /// Mirrors Todoist's project view: project color dot in the title, an "Active"
-/// section listing open tasks grouped under the project, and a collapsible
-/// "X completed" section for finished work. Shows a centered empty state when
-/// the project has no tasks at all. Light theme only — relies on `TK.*` tokens.
+/// section listing open tasks grouped under the project (or under user-defined
+/// `Section`s if any exist), and a collapsible "X completed" section for
+/// finished work. Shows a centered empty state when the project has no tasks
+/// at all. Light theme only — relies on `TK.*` tokens.
 ///
 /// Constructed with the project UUID (not a `Project` directly) because the
 /// detail pane receives only the ID through `NavDestination.project(_:)`.
@@ -18,8 +19,23 @@ struct ProjectDetailView: View {
     @Query(sort: \Project.order) private var allProjects: [Project]
     @Query(sort: \TodoTask.order) private var allTasks: [TodoTask]
 
+    @Environment(\.modelContext) private var ctx
+
     /// Disclosure state for the "X completed" section.
     @State private var showCompleted = false
+
+    // MARK: - View-local types
+
+    /// One visual block in the project list: either "un-sectioned tasks under
+    /// the project name" or "tasks under a user-defined `Section`".
+    private struct SectionGroup: Identifiable {
+        /// Sentinel id for the un-sectioned group. Keeps it distinguishable
+        /// from real section ids (which are UUIDs).
+        static let unsectionedID = "__project__"
+        let id: String
+        let name: String
+        let tasks: [TodoTask]
+    }
 
     // MARK: - Derived state
 
@@ -51,6 +67,34 @@ struct ProjectDetailView: View {
         projectTasks
             .filter { $0.isCompleted }
             .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
+    }
+
+    /// Incomplete tasks grouped by their `Section` (or by the project itself
+    /// for un-sectioned tasks). Unsectioned tasks come first, then sections in
+    /// their declared `order` — matches Todoist's project layout.
+    private var incompleteGroups: [SectionGroup] {
+        let incomplete = incompleteTasks
+        var groups: [SectionGroup] = []
+        let unsectioned = incomplete.filter { $0.section == nil }
+        if !unsectioned.isEmpty {
+            groups.append(SectionGroup(
+                id: SectionGroup.unsectionedID,
+                name: project?.name ?? "",
+                tasks: unsectioned
+            ))
+        }
+        let projectSections = (project?.sections ?? []).sorted { $0.order < $1.order }
+        for section in projectSections {
+            let tasks = incomplete.filter { $0.section?.id == section.id }
+            if !tasks.isEmpty {
+                groups.append(SectionGroup(
+                    id: section.id.uuidString,
+                    name: section.name,
+                    tasks: tasks
+                ))
+            }
+        }
+        return groups
     }
 
     // MARK: - Body
@@ -127,24 +171,34 @@ struct ProjectDetailView: View {
 
     private func taskList(for project: Project) -> some View {
         List {
-            Section {
-                if incompleteTasks.isEmpty {
-                    // Project has tasks but none are open — show a soft
-                    // "all caught up" line so the section header still
-                    // anchors the screen to the project.
+            let groups = incompleteGroups
+            if groups.isEmpty {
+                // Project has tasks but none are open — show a soft
+                // "all caught up" line so the section header still
+                // anchors the screen to the project.
+                Section {
                     Text("All caught up")
                         .font(TK.subhead)
                         .foregroundStyle(TK.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .listRowBackground(TK.canvas)
                         .accessibilityIdentifier("project-all-caught-up")
-                } else {
-                    ForEach(incompleteTasks) { task in
-                        rowLink(for: task)
+                } header: {
+                    activeHeader(for: project)
+                }
+            } else {
+                ForEach(groups) { group in
+                    Section {
+                        ForEach(group.tasks) { task in
+                            rowLink(for: task)
+                        }
+                        .onMove { source, destination in
+                            move(in: group, from: source, to: destination)
+                        }
+                    } header: {
+                        groupHeader(for: group)
                     }
                 }
-            } header: {
-                activeHeader(for: project)
             }
 
             if !completedTasks.isEmpty {
@@ -179,6 +233,17 @@ struct ProjectDetailView: View {
         .accessibilityIdentifier("project-row-\(task.id.uuidString.prefix(8))")
     }
 
+    // MARK: - Reorder
+
+    /// Drag-to-reorder within a single group (the un-sectioned bucket or one
+    /// user-defined `Section`). Cross-group moves would require rewriting the
+    /// `section` relation, so we scope each section's reorder to its own group.
+    private func move(in group: SectionGroup, from source: IndexSet, to destination: Int) {
+        var reordered = group.tasks
+        reordered.move(fromOffsets: source, toOffset: destination)
+        Repository.reorder(reordered, in: ctx)
+    }
+
     // MARK: - Section headers
 
     /// Active section header — project color dot, name, and open-task count.
@@ -201,6 +266,33 @@ struct ProjectDetailView: View {
         .textCase(nil)
         .accessibilityIdentifier("project-section-active")
         .accessibilityLabel("\(project.name), \(incompleteTasks.count) open tasks")
+    }
+
+    /// Header for one task group. The un-sectioned group is rendered with the
+    /// project's color dot (preserves the original project look); user-defined
+    /// `Section` groups render as plain uppercase names with a count.
+    private func groupHeader(for group: SectionGroup) -> some View {
+        HStack(spacing: 8) {
+            if group.id == SectionGroup.unsectionedID {
+                Circle()
+                    .fill(project?.color ?? TK.secondary)
+                    .frame(width: 10, height: 10)
+            }
+            Text(group.name.uppercased())
+                .font(TK.sectionHeader)
+                .foregroundStyle(TK.secondary)
+            Spacer(minLength: 0)
+            Text("\(group.tasks.count)")
+                .font(TK.sectionHeader)
+                .foregroundStyle(TK.secondary)
+                .monospacedDigit()
+        }
+        .textCase(nil)
+        .accessibilityIdentifier(
+            group.id == SectionGroup.unsectionedID
+                ? "project-section-active"
+                : "project-section-\(group.id.prefix(8))"
+        )
     }
 
     /// Collapsible "X completed" header — tap toggles the disclosure. Todoist
@@ -261,7 +353,7 @@ struct ProjectDetailView: View {
     static func previewContainer() -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(
-            for: TodoTask.self, Project.self, Label.self,
+            for: TodoTask.self, Project.self, Label.self, TaskSection.self,
             configurations: config
         )
         let ctx = container.mainContext
@@ -271,12 +363,18 @@ struct ProjectDetailView: View {
         ctx.insert(work)
         ctx.insert(home)
 
+        // Sections for the FITech project — exercises the new grouped layout.
+        let today = TaskSection(name: "Today", order: 0, project: work)
+        let week = TaskSection(name: "This week", order: 1, project: work)
+        ctx.insert(today)
+        ctx.insert(week)
+
         let now = Date()
         let cal = Calendar.current
 
         let active: [TodoTask] = [
-            TodoTask(title: "Review Q3 drone proposal with Firas", dueDate: now, priority: 1, order: 0, project: work),
-            TodoTask(title: "Send weekly status report", dueDate: cal.date(byAdding: .day, value: 1, to: now) ?? now, priority: 2, order: 1, project: work),
+            TodoTask(title: "Review Q3 drone proposal with Firas", dueDate: now, priority: 1, order: 0, project: work, section: today),
+            TodoTask(title: "Send weekly status report", dueDate: cal.date(byAdding: .day, value: 1, to: now) ?? now, priority: 2, order: 1, project: work, section: week),
             TodoTask(title: "Pick up groceries on the way home", dueDate: cal.date(byAdding: .day, value: 1, to: now) ?? now, priority: 3, order: 2, project: home),
             TodoTask(title: "Read SAM3 architecture paper", priority: 4, order: 3, project: work)
         ]

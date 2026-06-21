@@ -13,6 +13,9 @@ final class Project {
     @Relationship(deleteRule: .cascade, inverse: \TodoTask.project)
     var tasks: [TodoTask] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \TaskSection.project)
+    var sections: [TaskSection] = []
+
     init(name: String, colorHex: String = "8E8E93", order: Int = 0, isFavorite: Bool = false) {
         self.id = UUID()
         self.name = name

@@ -12,6 +12,7 @@ enum Seed {
 
     static func wipeAndSeed(context: ModelContext) {
         // Clear
+        NotificationManager.shared.cancelAll()
         for t in (try? context.fetch(FetchDescriptor<TodoTask>())) ?? [] { context.delete(t) }
         for p in (try? context.fetch(FetchDescriptor<Project>())) ?? [] { context.delete(p) }
         for l in (try? context.fetch(FetchDescriptor<Label>())) ?? [] { context.delete(l) }

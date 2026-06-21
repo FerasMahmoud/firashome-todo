@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct TodoApp: App {
     let container: ModelContainer
+    @AppStorage("hasOnboarded") private var hasOnboarded = false
 
     init() {
         let schema = Schema([TodoTask.self, Project.self, Label.self, Subtask.self])
@@ -25,12 +26,23 @@ struct TodoApp: App {
         } else {
             Seed.seedIfEmpty(context: container.mainContext)
         }
+
+        // Ask for local-notification permission the first time the app
+        // launches. iOS only shows the system prompt once per install —
+        // subsequent calls are no-ops, so re-launches are safe.
+        NotificationManager.shared.requestPermissionIfNeeded()
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(AuthManager())
+            Group {
+                if hasOnboarded {
+                    RootView()
+                } else {
+                    OnboardingView()
+                }
+            }
+            .environmentObject(AuthManager())
         }
         .modelContainer(container)
     }

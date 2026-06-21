@@ -10,6 +10,7 @@ enum NavDestination: Hashable {
     case projects
     case labels
     case account
+    case settings
     case project(UUID)
 }
 
@@ -17,6 +18,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @State private var selection: NavDestination? = .today
     @State private var showingQuickAdd = false
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var theme = ThemeManager.shared
 
     /// When launched with `--screen=<id>` (screenshot mode), render that screen
@@ -84,6 +86,8 @@ struct RootView: View {
             QuickAddView()
         } else if screen == "taskdetail" {
             ScreenshotTaskDetail()
+        } else if screen == "onboarding" {
+            OnboardingView()
         } else {
             NavigationStack {
                 detailView(NavDestination(screen: screen) ?? .today)
@@ -133,6 +137,7 @@ struct RootView: View {
         case .projects:        ProjectsView()
         case .labels:          LabelsView()
         case .account:         AccountView()
+        case .settings:        SettingsView()
         case .project(let id): ProjectDetailView(projectID: id)
         }
     }
@@ -148,6 +153,7 @@ extension NavDestination {
         case "projects": self = .projects
         case "labels":   self = .labels
         case "account":  self = .account
+        case "settings": self = .settings
         default:         return nil
         }
     }

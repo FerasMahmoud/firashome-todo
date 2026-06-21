@@ -14,6 +14,8 @@ struct UpcomingView: View {
     )
     private var incomplete: [TodoTask]
 
+    @Environment(\.modelContext) private var ctx
+
     private let horizonDays = 14
 
     var body: some View {
@@ -51,6 +53,9 @@ struct UpcomingView: View {
                     ForEach(bucket.tasks) { task in
                         TaskRowView(task: task)
                             .listRowSeparatorTint(TK.hairlineSoft)
+                    }
+                    .onMove { source, destination in
+                        move(in: bucket, from: source, to: destination)
                     }
                 } header: {
                     Text(bucket.label)
@@ -141,6 +146,17 @@ struct UpcomingView: View {
         if cal.isDateInToday(day) { return "Today" }
         if cal.isDateInTomorrow(day) { return "Tomorrow" }
         return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    }
+
+    // MARK: - Reorder
+
+    /// Drag-to-reorder within a single day's bucket. Cross-day moves would
+    /// require rewriting the due date, so we scope each section's reorder to
+    /// its own bucket.
+    private func move(in bucket: DayBucket, from source: IndexSet, to destination: Int) {
+        var reordered = bucket.tasks
+        reordered.move(fromOffsets: source, toOffset: destination)
+        Repository.reorder(reordered, in: ctx)
     }
 }
 
