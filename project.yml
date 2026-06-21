@@ -78,10 +78,12 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.uitests
-        GENERATE_INFOPLIST_FILE: YES
-        # UITest -Runner.app fails to install on the simulator ("Missing
-        # bundle ID") under inherited Manual signing. Simulator UI tests
-        # don't need signing — turn it off so the runner resolves its id.
+        # Explicit Info.plist (not generated) — the generated plist left the
+        # -Runner.app without a CFBundleIdentifier, so the simulator refused
+        # to install it ("Missing bundle ID"). An explicit plist fixes that.
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Support/UITests-Info.plist
+        # Simulator UI tests don't need signing.
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGN_IDENTITY: ""
