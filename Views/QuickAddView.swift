@@ -26,6 +26,19 @@ struct QuickAddView: View {
     @State private var recurrence: String? = nil
     @FocusState private var titleFocused: Bool
 
+    /// Live speech-to-text. Owned here so SwiftUI keeps the recognizer alive
+    /// across the sheet's redraws. `voice.transcript` is a `@Published` string
+    /// that streams partial results; `onChange(of: voice.transcript)` below
+    /// merges those into the title.
+    @StateObject private var voice = VoiceInput()
+    /// Drives the Live Text scan sheet (`Views/LiveTextView.swift`).
+    @State private var showLiveText = false
+    /// Snapshot of the title at the moment dictation started. Each new
+    /// partial transcript is merged as `voiceBase + transcript` so the user
+    /// sees their dictated text grow in place instead of accumulating
+    /// trailing whitespace from each partial.
+    @State private var voiceBase: String = ""
+
     /// Live parse of the title field. `nil` until the user types something.
     private var parsed: ParsedTask? {
         let raw = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -87,6 +100,27 @@ struct QuickAddView: View {
                 titleFocused = true
             }
         }
+        .onChange(of: voice.transcript) { _, newValue in
+            // Merge the latest partial into the title in real time. SwiftUI
+            // already animates the transcript pill (via .symbolEffect), so
+            // this just keeps the TextField in sync without redundant
+            // updates while the recognizer is idle.
+            guard voice.isListening else { return }
+            title = voiceBase + newValue
+        }
+        .onDisappear {
+            // Sheet dismissal (Cancel, Add, swipe-down) tears down the
+            // recognizer — otherwise the mic + audio session stay hot and
+            // the next time the user opens quick-add, `start()` would
+            // double-configure the engine.
+            voice.stop()
+            voice.reset()
+        }
+        .sheet(isPresented: $showLiveText) {
+            LiveTextView(scannedText: $title)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Sections
@@ -101,19 +135,32 @@ struct QuickAddView: View {
     }
 
     private var titleField: some View {
-        TextField(
-            "e.g., Review drone brief tomorrow p1 #FITech !1h",
-            text: $title,
-            axis: .vertical
-        )
-        .font(TK.body)
-        .foregroundStyle(TK.ink)
-        .focused($titleFocused)
-        .lineLimit(1...4)
-        .tint(TK.accent)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+        HStack(spacing: 8) {
+            TextField(
+                "e.g., Review drone brief tomorrow p1 #FITech !1h",
+                text: $title,
+                axis: .vertical
+            )
+            .font(TK.body)
+            .foregroundStyle(TK.ink)
+            .focused($titleFocused)
+            .lineLimit(1...4)
+            .tint(TK.accent)
+            .padding(.leading, 14)
+            .padding(.vertical, 14)
+            .frame(minHeight: 52, alignment: .leading)
+
+            if voice.isListening {
+                // Live-transcript pill: shows the latest partial so the user
+                // can see the recognizer is actually hearing them. Hidden
+                // while idle to keep the field compact.
+                liveTranscriptPill
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
+
+            micButton
+                .padding(.trailing, 8)
+        }
         .background(
             TK.card,
             in: RoundedRectangle(cornerRadius: TK.rRow, style: .continuous)
@@ -123,7 +170,66 @@ struct QuickAddView: View {
                 .stroke(TK.hairline, lineWidth: 0.5)
         )
         .padding(.horizontal, 16)
+        // Drives the live-transcript pill insertion/removal transition
+        // (matches the spring the mic button itself uses, so both feel
+        // like part of the same beat).
+        .animation(.spring(response: 0.32, dampingFraction: 0.62), value: voice.isListening)
         .accessibilityIdentifier("quick-add-title")
+    }
+
+    /// Compact pulsing dot + latest transcript. Slides in while listening
+    /// and slides out on stop — SwiftUI drives the timing via the parent
+    /// `.animation(.spring, value: voice.isListening)`.
+    private var liveTranscriptPill: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(TK.accent)
+                .frame(width: 8, height: 8)
+                .symbolEffect(.pulse, options: .repeating, isActive: voice.isListening)
+            Text(voice.transcript.isEmpty ? "Listening…" : voice.transcript)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(TK.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: 140, alignment: .leading)
+                // Smooth crossfade when partials replace each other — feels
+                // like the recognizer is "writing" instead of snapping.
+                .animation(.easeInOut(duration: 0.18), value: voice.transcript)
+                .transition(.opacity)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(TK.card.opacity(0.6), in: Capsule())
+        .accessibilityIdentifier("quick-add-live-transcript")
+    }
+
+    /// Trailing microphone toggle. When idle, just a mic icon; while
+    /// listening, the icon turns red and the whole button scales up via a
+    /// spring to read as "active". Tap again to stop.
+    private var micButton: some View {
+        Button {
+            toggleVoice()
+        } label: {
+            Image(systemName: voice.isListening ? "mic.fill" : "mic")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(voice.isListening ? .white : TK.ink)
+                .frame(width: 40, height: 40)
+                .background(
+                    voice.isListening ? TK.accent : TK.canvas.opacity(0.6),
+                    in: Circle()
+                )
+                .overlay(
+                    Circle().stroke(TK.hairline, lineWidth: 0.5)
+                )
+                // `symbolEffect(.pulse)` is the system pulse animation; the
+                // surrounding circle gets a separate spring scale so the
+                // whole affordance reads as "active" at a glance.
+                .scaleEffect(voice.isListening ? 1.08 : 1.0)
+                .symbolEffect(.pulse, options: .repeating, isActive: voice.isListening)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(voice.isListening ? "Stop dictation" : "Dictate task")
+        .accessibilityIdentifier("quick-add-mic")
+        .animation(.spring(response: 0.32, dampingFraction: 0.62), value: voice.isListening)
     }
 
     /// Compact summary of what the NL parser extracted from `title`. Hidden
@@ -229,8 +335,31 @@ struct QuickAddView: View {
             dateMenu
             priorityMenu
             recurrenceMenu
+            scanChip
             Spacer(minLength: 0)
         }
+    }
+
+    /// Live Text scan affordance. Presents `LiveTextView` in a sheet; the
+    /// sheet writes its recognized string back into `title` on Use, so this
+    /// view never holds any scanner state of its own.
+    private var scanChip: some View {
+        Button {
+            // Drop focus so the keyboard doesn't fight the sheet animation.
+            titleFocused = false
+            showLiveText = true
+        } label: {
+            chipLabel(
+                text: "Scan",
+                leading: {
+                    Image(systemName: "text.viewfinder")
+                        .foregroundStyle(TK.accent)
+                }
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Scan text")
+        .accessibilityIdentifier("quick-add-scan")
     }
 
     // MARK: - Menus
@@ -412,6 +541,36 @@ struct QuickAddView: View {
     }
 
     // MARK: - Helpers
+
+    /// Mic-button tap handler. Captures the title as `voiceBase` on start so
+    /// each partial can be merged as `voiceBase + transcript` (no trailing
+    /// whitespace accumulating across partials). On stop, the title is left
+    /// as the latest merged value — the recognizer publishes isListening=false
+    /// on its own after the engine stops.
+    private func toggleVoice() {
+        if voice.isListening {
+            voice.stop()
+        } else {
+            // Drop keyboard focus so the mic pill has room to animate in
+            // and the keyboard doesn't cover the live-transcript feedback.
+            titleFocused = false
+            // Snapshot the existing title (with a single trailing space if
+            // needed) so each partial becomes a clean concatenation.
+            let base = title
+            voiceBase = base.isEmpty || base.hasSuffix(" ") ? base : base + " "
+            Task {
+                do {
+                    try await voice.start()
+                } catch {
+                    // Silent no-op — the recognizer was unavailable or
+                    // permissions were denied. Reset the base so the next
+                    // start captures a clean snapshot, and let the user
+                    // keep typing without surprise state.
+                    voiceBase = ""
+                }
+            }
+        }
+    }
 
     private var canAdd: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

@@ -68,6 +68,22 @@ targets:
         com.apple.security.application-groups:
           - group.uk.firashome.todo
 
+  TodoControls:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Controls
+    settings:
+      base:
+        # ControlWidget / ControlWidgetBundle are iOS 18+; the parent
+        # project targets iOS 17, so this extension overrides the
+        # deployment target to compile the new control surface.
+        IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+        PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.controls
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Tasks Controls
+        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
   TodoScreenshotTests:
     type: bundle.ui-testing
     platform: iOS

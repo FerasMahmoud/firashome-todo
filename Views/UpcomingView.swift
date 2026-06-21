@@ -4,6 +4,9 @@ import SwiftData
 /// "Upcoming" screen — incomplete tasks due in the next 14 days, grouped per day.
 /// Mirrors real Todoist: a per-day list with "Tomorrow" / "Mon 21 Jun" section headers,
 /// a centred empty state when nothing is scheduled, and no chrome beyond the system nav title.
+///
+/// Toolbar exposes a Sort picker (re-orders rows inside every section) and a
+/// Group picker (day / flat / project). Both persist in AppStorage.
 struct UpcomingView: View {
     // Incomplete tasks only. SwiftData sorts the optional `dueDate` keypath with nils last.
     @Query(
@@ -17,6 +20,87 @@ struct UpcomingView: View {
     @Environment(\.modelContext) private var ctx
     @State private var selectedDay: Date?
 
+    /// Persisted sort order. Per-view key.
+    @AppStorage("upcoming-sort-mode") private var sortMode: SortMode = .priorityOrder
+
+    /// Persisted grouping mode. Per-view key.
+    @AppStorage("upcoming-group-mode") private var groupMode: GroupMode = .day
+
+    /// Display-only sort. Each case wraps one of the `TaskSort` helpers —
+    /// the toolbar Picker drives this; `apply(_:)` re-sorts the displayed
+    /// tasks inside every section.
+    private enum SortMode: String, CaseIterable, Identifiable {
+        case priorityOrder
+        case priorityDue
+        case dueOrder
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .priorityOrder: return "Priority"
+            case .priorityDue: return "Priority, then due date"
+            case .dueOrder: return "Due date"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .priorityOrder: return "exclamationmark.circle"
+            case .priorityDue: return "calendar.badge.clock"
+            case .dueOrder: return "calendar"
+            }
+        }
+
+        func apply(_ tasks: [TodoTask]) -> [TodoTask] {
+            switch self {
+            case .priorityOrder: return TaskSort.byPriorityThenOrder(tasks)
+            case .priorityDue: return TaskSort.byPriorityThenDueDate(tasks)
+            case .dueOrder: return TaskSort.byDueDateThenOrder(tasks)
+            }
+        }
+    }
+
+    /// Section shape. `day` is the original per-day split (the default);
+    /// `flat` collapses to a single section-less list; `project` buckets
+    /// by project. All three honour the selected sort inside each section.
+    private enum GroupMode: String, CaseIterable, Identifiable {
+        case day
+        case flat
+        case project
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .day: return "Day"
+            case .flat: return "Flat"
+            case .project: return "Project"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .day: return "calendar"
+            case .flat: return "list.bullet"
+            case .project: return "folder"
+            }
+        }
+    }
+
+    /// One renderable section. `id` is stable across re-renders so the
+    /// ForEach diff can identify which sections appear / disappear as the
+    /// group mode changes — that's what makes the section transition fire.
+    /// `label == nil` renders a section with no header (used by the flat
+    /// group mode where the top-of-list subtitle already names the day).
+    private struct DisplayBucket: Identifiable {
+        let id: String
+        let label: String?
+        let tasks: [TodoTask]
+        let icon: String?
+        let tint: Color?
+    }
+
     private let horizonDays = 14
 
     var body: some View {
@@ -24,7 +108,7 @@ struct UpcomingView: View {
             TK.canvas.ignoresSafeArea()
             VStack(spacing: 0) {
                 dateStrip
-                if filteredBuckets.isEmpty {
+                if displayedBuckets.isEmpty {
                     emptyState
                 } else {
                     list
@@ -34,6 +118,52 @@ struct UpcomingView: View {
         .navigationTitle("Upcoming")
         .navigationBarTitleDisplayMode(.large)
         .environment(\.hideRedundantDue, true)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                sortMenu
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                groupMenu
+            }
+        }
+    }
+
+    // MARK: - Toolbar menus
+
+    /// Sort picker. Icon bounces on each change so the user gets visible
+    /// acknowledgement even when the new order looks the same.
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort", selection: $sortMode) {
+                ForEach(SortMode.allCases) { mode in
+                    Label(mode.label, systemImage: mode.systemImage)
+                        .tag(mode)
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .symbolEffect(.bounce, value: sortMode)
+        }
+        .accessibilityLabel("Sort order")
+        .accessibilityIdentifier("upcoming-sort-menu")
+    }
+
+    /// Group picker. Icon bounces on each change so the section re-shuffle
+    /// is signalled in the toolbar even before the list re-renders.
+    private var groupMenu: some View {
+        Menu {
+            Picker("Group by", selection: $groupMode) {
+                ForEach(GroupMode.allCases) { mode in
+                    Label(mode.label, systemImage: mode.systemImage)
+                        .tag(mode)
+                }
+            }
+        } label: {
+            Image(systemName: "square.grid.2x2")
+                .symbolEffect(.bounce, value: groupMode)
+        }
+        .accessibilityLabel("Group by")
+        .accessibilityIdentifier("upcoming-group-menu")
     }
 
     // MARK: - Date strip
@@ -104,7 +234,7 @@ struct UpcomingView: View {
                     .accessibilityIdentifier("upcoming-subtitle")
             }
 
-            ForEach(filteredBuckets) { bucket in
+            ForEach(displayedBuckets) { bucket in
                 Section {
                     // Rows inlined (NOT a nested List) so day headers + rows share one grid.
                     ForEach(bucket.tasks) { task in
@@ -112,24 +242,46 @@ struct UpcomingView: View {
                             .listRowSeparatorTint(TK.hairlineSoft)
                     }
                     .onMove { source, destination in
-                        move(in: bucket, from: source, to: destination)
+                        move(bucket.tasks, from: source, to: destination)
                     }
                 } header: {
-                    Text(bucket.label)
-                        .font(TK.sectionHeader)
-                        .foregroundStyle(TK.secondary)
+                    if let label = bucket.label {
+                        HStack(spacing: 6) {
+                            if let icon = bucket.icon {
+                                Image(systemName: icon)
+                                    .font(TK.sectionHeader)
+                                    .foregroundStyle(bucket.tint ?? TK.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                            Text(label)
+                                .font(TK.sectionHeader)
+                                .foregroundStyle(bucket.tint ?? TK.secondary)
+                        }
                         .textCase(nil)
-                        .accessibilityIdentifier("upcoming-day-header-\(bucket.idString)")
+                        .accessibilityIdentifier("upcoming-bucket-header-\(bucket.id)")
+                    }
                 }
+                // Section-level transition: when group mode changes and a
+                // section appears or disappears, glide it in from the top
+                // with an opacity fade.
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        
+
         .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
         .listRowSeparator(.hidden)
-            
+
         .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        // Spring animation bound to the bucket count — covers task add /
+        // remove from the underlying @Query. The .animation(value:)
+        // modifier also propagates to the section transitions on
+        // group-mode change because the section count is part of the
+        // bucket structure.
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: sortMode)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: groupMode)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: displayedBuckets.count)
     }
 
     private var emptyState: some View {
@@ -174,34 +326,24 @@ struct UpcomingView: View {
         return cal.date(byAdding: .day, value: horizonDays, to: today) ?? today
     }
 
-    /// Buckets: one per day within the horizon, sorted ascending; each bucket's tasks sorted by priority then order.
-    private var buckets: [DayBucket] {
-        let cal = Calendar.current
+    /// Tasks in the horizon window — pre-filtered once so every group
+    /// mode reads from the same source. Date scoping is independent of
+    /// the chosen group mode.
+    private var inWindow: [TodoTask] {
         let start = horizonStart
         let end = horizonEnd
-
-        let inWindow = incomplete.compactMap { task -> TodoTask? in
+        return incomplete.compactMap { task -> TodoTask? in
             guard let due = task.dueDate, due >= start, due < end else { return nil }
             return task
         }
-
-        let grouped = Dictionary(grouping: inWindow) { task in
-            cal.startOfDay(for: task.dueDate ?? .now)
-        }
-
-        return grouped.keys.sorted().map { day in
-            let tasks = (grouped[day] ?? []).sorted { lhs, rhs in
-                if lhs.priority != rhs.priority { return lhs.priority < rhs.priority }
-                return lhs.order < rhs.order
-            }
-            return DayBucket(date: day, label: Self.label(for: day), tasks: tasks)
-        }
     }
 
-    /// Buckets for display — when a pill is selected, narrow to that day's tasks;
-    /// if nothing matches, fall back to the full upcoming list (never an empty body).
-    private var filteredBuckets: [DayBucket] {
-        guard let day = selectedDay else { return buckets }
+    /// Tasks scoped to the selected day, or the full horizon when no day
+    /// is selected. Mirrors the original `filteredBuckets` fallback — if
+    /// the selected day has no tasks, the full upcoming list shows so the
+    /// user is never stuck on an empty body.
+    private var scopedTasks: [TodoTask] {
+        guard let day = selectedDay else { return inWindow }
         let cal = Calendar.current
         let startOfDay = cal.startOfDay(for: day)
         let endOfDay = cal.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay
@@ -209,12 +351,80 @@ struct UpcomingView: View {
             guard let due = task.dueDate, due >= startOfDay, due < endOfDay else { return nil }
             return task
         }
-        guard !onDay.isEmpty else { return buckets }
-        let sorted = onDay.sorted { lhs, rhs in
-            if lhs.priority != rhs.priority { return lhs.priority < rhs.priority }
-            return lhs.order < rhs.order
+        guard !onDay.isEmpty else { return inWindow }
+        return onDay
+    }
+
+    /// Sections to render for the current group mode. Each bucket's tasks
+    /// are re-sorted with the user's chosen `sortMode` so the picker
+    /// reshuffles the rows inside every section.
+    private var displayedBuckets: [DisplayBucket] {
+        let tasks = scopedTasks
+        switch groupMode {
+        case .day:
+            // One bucket per day in the scoped window, sorted ascending.
+            let cal = Calendar.current
+            let grouped = Dictionary(grouping: tasks) { task in
+                cal.startOfDay(for: task.dueDate ?? .now)
+            }
+            return grouped.keys.sorted().map { day in
+                DisplayBucket(
+                    id: "day-\(ISO8601DateFormatter().string(from: day))",
+                    label: Self.label(for: day),
+                    tasks: sortMode.apply(grouped[day] ?? []),
+                    icon: nil,
+                    tint: nil
+                )
+            }
+
+        case .flat:
+            // A single header-less bucket. The top-of-list "Upcoming"
+            // subtitle already names the scope, so no per-section header.
+            return [
+                DisplayBucket(
+                    id: "flat",
+                    label: nil,
+                    tasks: sortMode.apply(tasks),
+                    icon: nil,
+                    tint: nil
+                )
+            ]
+
+        case .project:
+            // Un-assigned tasks first, then one section per project,
+            // sorted by project name for stable order.
+            var buckets: [DisplayBucket] = []
+            let unassigned = tasks.filter { $0.project == nil }
+            if !unassigned.isEmpty {
+                buckets.append(DisplayBucket(
+                    id: "no-project",
+                    label: "No project",
+                    tasks: sortMode.apply(unassigned),
+                    icon: "tray",
+                    tint: TK.secondary
+                ))
+            }
+            let byProject = Dictionary(grouping: tasks.filter { $0.project != nil }) { task in
+                task.project?.id ?? UUID()
+            }
+            let projectIDs = byProject.keys.sorted { lhs, rhs in
+                let l = byProject[lhs]?.first?.project?.name ?? ""
+                let r = byProject[rhs]?.first?.project?.name ?? ""
+                return l.localizedCaseInsensitiveCompare(r) == .orderedAscending
+            }
+            for pid in projectIDs {
+                let bucketTasks = byProject[pid] ?? []
+                guard let name = bucketTasks.first?.project?.name else { continue }
+                buckets.append(DisplayBucket(
+                    id: "project-\(pid.uuidString)",
+                    label: name,
+                    tasks: sortMode.apply(bucketTasks),
+                    icon: "folder",
+                    tint: nil
+                ))
+            }
+            return buckets
         }
-        return [DayBucket(date: startOfDay, label: Self.label(for: startOfDay), tasks: sorted)]
     }
 
     private static func label(for day: Date) -> String {
@@ -226,32 +436,17 @@ struct UpcomingView: View {
 
     // MARK: - Reorder
 
-    /// Drag-to-reorder within a single day's bucket. Cross-day moves would
-    /// require rewriting the due date, so we scope each section's reorder to
-    /// its own bucket.
-    private func move(in bucket: DayBucket, from source: IndexSet, to destination: Int) {
-        var reordered = bucket.tasks
+    /// Drag-to-reorder within a single bucket. Unified across all group
+    /// modes (day, flat, project) — each section exposes its `tasks`
+    /// array and the reorder rewrites `order` to match the post-sort
+    /// positions. Cross-day moves would require rewriting the due date,
+    /// so we scope each section's reorder to its own bucket.
+    private func move(_ tasks: [TodoTask], from source: IndexSet, to destination: Int) {
+        var reordered = tasks
         reordered.move(fromOffsets: source, toOffset: destination)
         Repository.reorder(reordered, in: ctx)
     }
 }
-
-// MARK: - Day bucket
-
-private struct DayBucket: Identifiable {
-    let date: Date
-    let label: String
-    let tasks: [TodoTask]
-
-    var id: Date { date }
-
-    /// Stable string for accessibilityIdentifier (UUIDs/Date ids can't appear directly in identifiers).
-    var idString: String {
-        ISO8601DateFormatter().string(from: date)
-    }
-}
-
-// MARK: - Preview
 
 // MARK: - Date pill
 
@@ -289,6 +484,9 @@ private struct DatePill: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier("upcoming-date-pill-\(dayNumber)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // Spring the colour flip when the pill is selected / deselected so
+        // the tap feedback matches the spring on the rest of the screen.
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
     }
 
     private var weekday: String {

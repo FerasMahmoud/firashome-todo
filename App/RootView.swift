@@ -24,6 +24,10 @@ struct RootView: View {
     @State private var showingQuickAdd = false
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var theme = ThemeManager.shared
+    /// Observed so the body's `.animation(value: density.mode.rawValue)`
+    /// fires when the user flips density from Settings — without this the
+    /// view body never re-renders on a density change.
+    @ObservedObject private var density = DensityManager.shared
 
     /// When launched with `--screen=<id>` (screenshot mode), render that screen
     /// full-screen deterministically — bypassing the split-view so the UITest
@@ -57,6 +61,11 @@ struct RootView: View {
         }
         .background(planetBackground)
         .preferredColorScheme(TK.isDarkGlass ? .dark : .light)
+        // Cascade theme + density changes through the scene. `SettingsView`
+        // also carries a matching `.animation` on its appearance section so
+        // the picker itself slides — this one handles the rest of the tree.
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: theme.raw)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: density.mode.rawValue)
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
             if args.contains("--theme=darkglass") {
@@ -74,7 +83,7 @@ struct RootView: View {
         } detail: {
             detail
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    AddTaskBar { showingQuickAdd = true }
+                    AddTaskBar(action: { showingQuickAdd = true }, screenSymbol: addSymbolForScreen)
                 }
         }
         .tint(TK.accent)
@@ -96,7 +105,7 @@ struct RootView: View {
             NavigationStack {
                 detailView(NavDestination(screen: screen) ?? .today)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        AddTaskBar { showingQuickAdd = true }
+                        AddTaskBar(action: { showingQuickAdd = true }, screenSymbol: addSymbol(for: screen))
                     }
                     .toolbar {
                         // Todoist-style nav chrome: menu (left), search + more (right).
@@ -173,18 +182,32 @@ extension NavDestination {
 
 /// Todoist's signature bottom "Add task" bar — full-width rounded row with a
 /// red ＋ and muted "Add task" label, sitting above the home indicator.
+///
+/// The leading symbol swaps with `screenSymbol` so the button telegraphs
+/// what it'll add (a task, a task inside a project, or a task carrying a
+/// label). The swap is animated with `.symbolEffect(.bounce)` for the
+/// bounce kick and `.contentTransition(.symbolEffect(.replace))` for the
+/// smooth morph between glyphs; the wrapping `.animation(.spring)` settles
+/// the rest of the row (padding, label) on the same beat.
 struct AddTaskBar: View {
     let action: () -> Void
+    /// SF Symbol name for the leading icon. Defaults to `plus.circle` so
+    /// the existing screenshot-mode + preview call sites keep working.
+    var screenSymbol: String = "plus.circle"
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 11) {
-                Image(systemName: "plus.circle.fill")
+                Image(systemName: screenSymbol)
                     .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(TK.accent)
+                    .symbolEffect(.bounce, value: screenSymbol)
+                    .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
                 Text("Add task")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(TK.secondary)
+                    .contentTransition(.opacity)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
@@ -199,8 +222,38 @@ struct AddTaskBar: View {
             }
         }
         .buttonStyle(.plain)
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: screenSymbol)
         .accessibilityLabel("Add task")
         .accessibilityIdentifier("Add task")
+    }
+}
+
+// MARK: - Add-symbol derivation
+
+extension RootView {
+    /// SF Symbol for `AddTaskBar` based on the current `selection`. Mapping:
+    ///   - any project screen  → `folder.badge.plus`
+    ///   - the labels screen    → `tag.fill`
+    ///   - everything else      → `plus.circle`
+    /// Default keeps the existing bar for Today / Inbox / Upcoming / Calendar
+    /// / search / filters / activity / productivity / account / settings —
+    /// i.e. all the screens that aren't project- or label-scoped.
+    fileprivate var addSymbolForScreen: String {
+        switch selection {
+        case .projects, .project: return "folder.badge.plus"
+        case .labels:             return "tag.fill"
+        default:                  return "plus.circle"
+        }
+    }
+
+    /// Same mapping as `addSymbolForScreen`, but driven by the screenshot
+    /// `--screen=` string so the dynamic icon shows up in the capture too.
+    fileprivate func addSymbol(for screen: String) -> String {
+        switch screen {
+        case "projects": return "folder.badge.plus"
+        case "labels":   return "tag.fill"
+        default:         return "plus.circle"
+        }
     }
 }
 

@@ -18,6 +18,7 @@ struct TaskRowView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.hideRedundantDue) private var hideRedundantDue
     @ObservedObject private var DM = DensityManager.shared
+    @ObservedObject private var swipe = SwipeConfig.shared
 
     /// Short alias so the body reads `m.rowVPadding` instead of
     /// `DM.mode.metrics.rowVPadding`. Re-evaluated each render — cheap.
@@ -52,26 +53,16 @@ struct TaskRowView: View {
         // (checkbox tap, swipe-right, context menu) because they all
         // flip task.isCompleted. iOS 17+; no-op on older OS.
         .sensoryFeedback(.impact(weight: .medium), trigger: task.isCompleted)
-        // Touch: swipe-left → Delete, swipe-right → Complete/Undo.
-        // Applied on the row itself so EVERY list using TaskRowView (Inbox,
-        // Today, Upcoming, Filters, Project detail, TaskListView) gets the
-        // same actions — single source of truth.
+        // Touch: user-configurable swipe. Both edges always carry a modifier
+        // so the gesture is consistently attached; an edge with `.none` just
+        // renders `EmptyView()` — the swipe happens, no button appears.
+        // Settings in `SwipeConfig` are observed here, so a toggle re-renders
+        // every visible row in place.
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                Repository.delete(task, in: context)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            .tint(TK.accent)
+            swipeButton(for: swipe.trailingAction)
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                Repository.toggle(task, in: context)
-            } label: {
-                Label(task.isCompleted ? "Undo" : "Complete",
-                      systemImage: task.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
-            }
-            .tint(Color(red: 0.18, green: 0.69, blue: 0.34))
+            swipeButton(for: swipe.leadingAction)
         }
         // PC / mouse: right-click. Touch: long-press. Same actions as swipe
         // so the row is fully usable without a swipe gesture.
@@ -107,6 +98,11 @@ struct TaskRowView: View {
                     Image(systemName: "checkmark")
                         .font(m.checkmarkFont)
                         .foregroundStyle(.white)
+                        // Apple Motion: bounce the checkmark when completion
+                        // flips. On un-complete the symbol disappears with
+                        // its enclosing if-branch, so the effect only fires
+                        // on the visible (true) side.
+                        .symbolEffect(.bounce, value: task.isCompleted)
                 } else {
                     Circle()
                         .strokeBorder(TK.priority(task.priority), lineWidth: 1.8)
@@ -122,6 +118,43 @@ struct TaskRowView: View {
         .padding(.top, m.checkboxTopPadding)
     }
 
+    // MARK: - Swipe button (driven by SwipeConfig)
+
+    /// Builds the button for one edge's configured action. `.none` returns
+    /// `EmptyView()` so the row still carries the `.swipeActions` modifier
+    /// (consistent gesture handling) but reveals nothing on swipe.
+    @ViewBuilder
+    private func swipeButton(for action: SwipeAction) -> some View {
+        switch action {
+        case .none:
+            EmptyView()
+        case .complete:
+            Button {
+                Repository.toggle(task, in: context)
+            } label: {
+                Label(task.isCompleted ? "Undo" : "Complete",
+                      systemImage: task.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
+            }
+            .tint(Color(red: 0.18, green: 0.69, blue: 0.34))
+        case .delete:
+            Button(role: .destructive) {
+                Repository.delete(task, in: context)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(TK.accent)
+        case .archive:
+            Button {
+                Repository.archive(task, in: context)
+            } label: {
+                Label("Archive", systemImage: "archivebox")
+            }
+            // Warm amber — distinct from complete-green and delete-red so the
+            // three swipe actions read at a glance on any theme.
+            .tint(Color(red: 0.85, green: 0.58, blue: 0.20))
+        }
+    }
+
     // MARK: - Title
 
     private var titleLine: some View {
@@ -133,6 +166,11 @@ struct TaskRowView: View {
             .lineSpacing(m.titleLineSpacing)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
+            // Apple Motion: crossfade title content on state flip…
+            .contentTransition(.opacity)
+            // …and spring the strikethrough (and any other value-driven
+            // change on this Text) for a snappy but soft settle.
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: task.isCompleted)
     }
 
     // MARK: - Meta line (project + due)

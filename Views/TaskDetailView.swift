@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
+import AVFoundation
+import UIKit
 
 /// A Todoist-style task detail / editor view. Presented as the destination of
 /// any task row tap. Edits title, note, project, due date, and priority
@@ -32,6 +35,25 @@ struct TaskDetailView: View {
     /// single picker can stamp multiple reminders in succession.
     @State private var newReminderDate: Date = TaskDetailView.defaultNewReminderDate
 
+    // MARK: - Media (attachments + voice notes)
+    // Attachment image files and voice-note audio files live on disk under
+    // the app's Documents directory at `Documents/<taskID>/attachments/` and
+    // `Documents/<taskID>/voice/` respectively. The view loads the directory
+    // listing on appear and after every add/delete. Files survive app
+    // restarts; deleting the task removes the parent folder in `Repository`.
+    //
+    // Info.plist requirements (must be set in the host app target):
+    //   NSPhotoLibraryUsageDescription  — "Attach photos to a task"
+    //   NSSMicrophoneUsageDescription   — "Record voice notes for a task"
+    @State private var attachments: [URL] = []
+    @State private var voiceNotes: [URL] = []
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var isRecording: Bool = false
+    @State private var audioRecorder: AVAudioRecorder?
+    @State private var currentPlayer: AVAudioPlayer?
+    @State private var playingURL: URL?
+    @State private var showMicDenied: Bool = false
+
     init(task: TodoTask) {
         self.task = task
         self._hasDueDate = State(initialValue: task.dueDate != nil)
@@ -58,6 +80,8 @@ struct TaskDetailView: View {
                 remindersCard(task: task)
                 priorityCard(task: task)
                 recurrenceCard(task: task)
+                attachmentsCard(task: task)
+                voiceNotesCard(task: task)
                 metaFooter
                 deleteButton
             }
@@ -84,6 +108,28 @@ struct TaskDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This action cannot be undone.")
+        }
+        .onAppear(perform: loadMedia)
+        .onDisappear {
+            // Release audio resources so a swiped-away task doesn't keep
+            // recording or playing in the background.
+            if isRecording {
+                audioRecorder?.stop()
+                audioRecorder = nil
+                isRecording = false
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
+            currentPlayer?.stop()
+            currentPlayer = nil
+            playingURL = nil
+        }
+        .alert("Microphone access denied", isPresented: $showMicDenied) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Enable Microphone in Settings to record voice notes.")
+        }
+        .onChange(of: photoItems) { _, items in
+            handlePickedPhotos(items)
         }
         .onChange(of: task.title) { _, _ in persist() }
         .onChange(of: task.note) { _, _ in persist() }
@@ -587,6 +633,319 @@ struct TaskDetailView: View {
         return kind.label
     }
 
+    // MARK: - Attachments (images)
+
+    private func attachmentsCard(task: TodoTask) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "paperclip")
+                    .font(TK.sectionHeader)
+                    .foregroundStyle(TK.secondary)
+                sectionLabel("Attachments")
+                Spacer()
+                let n = attachments.count
+                if n > 0 {
+                    Text("\(n)")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(TK.secondary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .accessibilityLabel("\(n) attachments")
+                }
+            }
+
+            PhotosPicker(
+                selection: $photoItems,
+                maxSelectionCount: nil,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(TK.accent)
+                    Text(attachments.isEmpty ? "Add a photo" : "Add more")
+                        .font(TK.body)
+                        .foregroundStyle(TK.ink)
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("task-detail-attachments-add")
+
+            if attachments.isEmpty {
+                Text("No attachments yet")
+                    .font(TK.subhead)
+                    .foregroundStyle(TK.secondary)
+                    .padding(.vertical, 2)
+                    .accessibilityIdentifier("task-detail-attachments-empty")
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(attachments, id: \.self) { url in
+                            AttachmentThumb(url: url) {
+                                deleteAttachment(url)
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: attachments)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(TK.card, in: RoundedRectangle(cornerRadius: TK.rCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
+                .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
+        )
+        .accessibilityIdentifier("task-detail-attachments-card")
+    }
+
+    // MARK: - Voice notes
+
+    private func voiceNotesCard(task: TodoTask) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "mic")
+                    .font(TK.sectionHeader)
+                    .foregroundStyle(TK.secondary)
+                sectionLabel("Voice notes")
+                Spacer()
+                let n = voiceNotes.count
+                if n > 0 {
+                    Text("\(n)")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(TK.secondary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .accessibilityLabel("\(n) voice notes")
+                }
+            }
+
+            recordButton
+
+            if voiceNotes.isEmpty {
+                Text("No recordings yet")
+                    .font(TK.subhead)
+                    .foregroundStyle(TK.secondary)
+                    .padding(.vertical, 2)
+                    .accessibilityIdentifier("task-detail-voice-empty")
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(voiceNotes, id: \.self) { url in
+                        VoiceNoteRow(
+                            url: url,
+                            isPlaying: playingURL == url,
+                            onPlay: { togglePlayback(url) },
+                            onDelete: { deleteVoiceNote(url) }
+                        )
+                        .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: voiceNotes)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(TK.card, in: RoundedRectangle(cornerRadius: TK.rCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
+                .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
+        )
+        .accessibilityIdentifier("task-detail-voice-card")
+    }
+
+    /// Tap-to-toggle record button. Mirrors the rest of the detail view's
+    /// plain-button style; the mic/stop glyph pulses while recording and a
+    /// small REC chip sits on the trailing edge.
+    private var recordButton: some View {
+        Button {
+            toggleRecording()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(isRecording ? TK.accent : TK.ink)
+                    .symbolEffect(.pulse, options: .repeating, isActive: isRecording)
+                Text(isRecording ? "Stop recording" : "Record a voice note")
+                    .font(TK.body)
+                    .foregroundStyle(TK.ink)
+                Spacer()
+                if isRecording {
+                    Text("REC")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(TK.accent, in: Capsule())
+                }
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .scaleEffect(isRecording ? 1.02 : 1.0)
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isRecording)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(isRecording ? "task-detail-voice-stop" : "task-detail-voice-record")
+        .accessibilityLabel(isRecording ? "Stop recording" : "Record a voice note")
+    }
+
+    // MARK: - Media helpers
+
+    /// Per-task root folder inside the app's Documents directory.
+    private var mediaRoot: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let url = docs.appendingPathComponent(task.id.uuidString, isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private var attachmentsDir: URL {
+        ensure(mediaRoot.appendingPathComponent("attachments", isDirectory: true))
+    }
+
+    private var voiceDir: URL {
+        ensure(mediaRoot.appendingPathComponent("voice", isDirectory: true))
+    }
+
+    private func ensure(_ url: URL) -> URL {
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func loadMedia() {
+        let fm = FileManager.default
+        attachments = ((try? fm.contentsOfDirectory(at: attachmentsDir, includingPropertiesForKeys: nil)) ?? [])
+            .filter { ["jpg", "jpeg", "png", "heic"].contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        voiceNotes = ((try? fm.contentsOfDirectory(at: voiceDir, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension.lowercased() == "m4a" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    /// Convert a batch of `PhotosPickerItem`s into JPEG files on disk. The
+    /// picker hands us raw `Data`; we decode, recompress, and write under
+    /// `attachmentsDir/`. Failures are silent — a corrupt item is dropped.
+    private func handlePickedPhotos(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
+        Task {
+            for item in items {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+                let name = "img-\(UUID().uuidString.prefix(8))"
+                if let img = UIImage(data: data),
+                   let jpeg = img.jpegData(compressionQuality: 0.85) {
+                    try? jpeg.write(to: attachmentsDir.appendingPathComponent("\(name).jpg"))
+                } else {
+                    try? data.write(to: attachmentsDir.appendingPathComponent("\(name).png"))
+                }
+            }
+            await MainActor.run {
+                photoItems = []
+                loadMedia()
+            }
+        }
+    }
+
+    private func deleteAttachment(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            attachments.removeAll { $0 == url }
+        }
+    }
+
+    private func toggleRecording() {
+        if isRecording {
+            audioRecorder?.stop()
+            audioRecorder = nil
+            isRecording = false
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            loadMedia()
+            return
+        }
+        AVAudioApplication.requestRecordPermission { granted in
+            Task { @MainActor in
+                if granted {
+                    self.startRecording()
+                } else {
+                    self.showMicDenied = true
+                }
+            }
+        }
+    }
+
+    private func startRecording() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setActive(true)
+            let url = voiceDir.appendingPathComponent("rec-\(Int(Date().timeIntervalSince1970)).m4a")
+            let settings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 44_100,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
+            let rec = try AVAudioRecorder(url: url, settings: settings)
+            rec.prepareToRecord()
+            rec.record()
+            audioRecorder = rec
+            isRecording = true
+        } catch {
+            // Recording unavailable (e.g. simulator without mic) — silently no-op.
+            isRecording = false
+        }
+    }
+
+    private func togglePlayback(_ url: URL) {
+        if playingURL == url {
+            currentPlayer?.stop()
+            currentPlayer = nil
+            playingURL = nil
+            return
+        }
+        currentPlayer?.stop()
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default)
+            try session.setActive(true)
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.prepareToPlay()
+            player.play()
+            currentPlayer = player
+            playingURL = url
+            // Auto-clear `playingURL` once the recording's natural duration
+            // elapses (plus a 100ms grace). We poll by sleep rather than
+            // wiring an AVAudioPlayerDelegate so the view stays plain SwiftUI.
+            let duration = max(player.duration, 0.1)
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000) + 100_000_000)
+                if playingURL == url {
+                    playingURL = nil
+                    currentPlayer = nil
+                }
+            }
+        } catch {
+            playingURL = nil
+        }
+    }
+
+    private func deleteVoiceNote(_ url: URL) {
+        if playingURL == url {
+            currentPlayer?.stop()
+            currentPlayer = nil
+            playingURL = nil
+        }
+        try? FileManager.default.removeItem(at: url)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            voiceNotes.removeAll { $0 == url }
+        }
+    }
+
     // MARK: - Meta footer
 
     private var metaFooter: some View {
@@ -802,6 +1161,198 @@ private struct ReminderRow: View {
         .accessibilityLabel("Reminder at \(reminder.date.formatted(.dateTime.weekday(.wide).day().month().hour().minute()))")
         .accessibilityHint("Swipe left to delete")
         .accessibilityIdentifier("reminder-row")
+    }
+}
+
+// MARK: - Attachment thumbnail
+
+/// One image thumbnail in the attachments card's horizontal scroller. The
+/// image is loaded lazily from disk via `.task(id:)`, so off-screen thumbs
+/// don't pay decode cost. Tapping the small `x` button in the top-right
+/// corner deletes the underlying file.
+private struct AttachmentThumb: View {
+    let url: URL
+    let onDelete: () -> Void
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Group {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Color.gray.opacity(0.15)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .font(.system(size: 18))
+                                .foregroundStyle(TK.secondary)
+                        )
+                }
+            }
+            .frame(width: 88, height: 88)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
+            )
+
+            Button {
+                onDelete()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.55))
+                    .padding(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove attachment")
+            .accessibilityIdentifier("task-detail-attachment-remove")
+        }
+        .task(id: url) {
+            let loaded = UIImage(contentsOfFile: url.path)
+            await MainActor.run { self.image = loaded }
+        }
+    }
+}
+
+// MARK: - Voice note row
+
+/// One recorded voice note in the voice-notes card. Mirrors the ReminderRow
+/// swipe-to-reveal delete affordance: drag left past ~44pt to expose a red
+/// "Delete" button, tap an open row to close it. The leading play button
+/// toggles AVAudioPlayer via the parent; its glyph swaps to `stop.fill`
+/// while the audio is playing.
+private struct VoiceNoteRow: View {
+    let url: URL
+    let isPlaying: Bool
+    let onPlay: () -> Void
+    let onDelete: () -> Void
+
+    @State private var offset: CGFloat = 0
+    @State private var dragStart: CGFloat = 0
+    private static let openX: CGFloat = -88
+    private static let threshold: CGFloat = -44
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            deleteButton
+            rowContent
+        }
+        .frame(minHeight: 40)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var deleteButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { onDelete() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Delete")
+                    .font(TK.sectionHeader)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .frame(maxHeight: .infinity)
+            .background(TK.accent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Delete voice note")
+        .accessibilityIdentifier("voice-delete")
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: 10) {
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { onPlay() }
+            } label: {
+                Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(isPlaying ? TK.accent : TK.ink))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isPlaying ? "Stop playback" : "Play recording")
+            .accessibilityIdentifier("voice-play")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(displayName)
+                    .font(TK.body)
+                    .foregroundStyle(TK.ink)
+                    .lineLimit(1)
+                Text(secondaryLabel)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(TK.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(TK.card)
+        .contentShape(Rectangle())
+        .offset(x: offset)
+        .gesture(
+            DragGesture(minimumDistance: 8, coordinateSpace: .local)
+                .onChanged { value in
+                    // Only react when horizontal motion dominates — keeps
+                    // vertical scrolling inside the parent ScrollView snappy.
+                    guard abs(value.translation.width) > abs(value.translation.height) * 1.4 else { return }
+                    let proposed = dragStart + value.translation.width
+                    offset = min(0, max(Self.openX, proposed))
+                }
+                .onEnded { value in
+                    let horizontal = abs(value.translation.width) > abs(value.translation.height) * 1.4
+                    guard horizontal else { return }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        offset = offset < Self.threshold ? Self.openX : 0
+                        dragStart = offset
+                    }
+                }
+        )
+        .onTapGesture {
+            // Tap on an open row closes it. Taps on a closed row are
+            // ignored here so other gestures (DatePicker focus, etc.)
+            // remain unaffected.
+            guard offset < 0 else { return }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                offset = 0
+                dragStart = 0
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(displayName), \(secondaryLabel)")
+        .accessibilityHint("Swipe left to delete")
+        .accessibilityIdentifier("voice-row")
+    }
+
+    /// Friendly label derived from the file's `rec-<unix>` filename: shows
+    /// the recording's wall-clock time so users can scan a list quickly.
+    private var displayName: String {
+        let stamp = url.deletingPathExtension().lastPathComponent
+            .replacingOccurrences(of: "rec-", with: "")
+        if let secs = TimeInterval(stamp) {
+            let date = Date(timeIntervalSince1970: secs)
+            return "Recording " + date.formatted(date: .abbreviated, time: .shortened)
+        }
+        return url.deletingPathExtension().lastPathComponent
+    }
+
+    private var secondaryLabel: String {
+        let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let sizeStr = formatBytes(bytes)
+        return isPlaying ? "Playing · \(sizeStr)" : sizeStr
+    }
+
+    private func formatBytes(_ bytes: Int) -> String {
+        let kb = Double(bytes) / 1024.0
+        if kb < 1024 { return String(format: "%.0f KB", kb) }
+        return String(format: "%.1f MB", kb / 1024.0)
     }
 }
 

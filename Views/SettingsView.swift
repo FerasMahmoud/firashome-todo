@@ -27,6 +27,22 @@ struct SettingsView: View {
     /// `AppIcon-Dark` / `AppIcon-Color` entries land in the asset catalog later.
     @AppStorage("appIcon") private var appIconRaw: String = AppIconOption.primary.id
 
+    /// Locks the app behind a biometric prompt at launch and after every
+    /// background transition. Read by `TodoApp`'s gate; the toggle here also
+    /// calls `BiometricLock.shared.enable()` / `disable()` to keep its own
+    /// `isEnabled` mirror in sync, since the singleton tracks it under a
+    /// separate `UserDefaults` key.
+    @AppStorage("biometricLock") private var biometricLock = false
+
+    /// `Support/SwipeConfig.swift` is owned by another agent; we observe its
+    /// singleton so the pickers below stay live with whatever `TaskRowView`
+    /// eventually reads at swipe time.
+    @ObservedObject private var swipe = SwipeConfig.shared
+
+    /// Mirrors `BiometricLock.shared` so the privacy footer can react to
+    /// enrolment / hardware changes without owning the singleton.
+    @ObservedObject private var bioLock = BiometricLock.shared
+
     @State private var pickingDefaultProject = false
     @State private var pickingAppIcon = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
@@ -38,8 +54,10 @@ struct SettingsView: View {
             appearanceSection
             notificationsSection
             appIconSection
+            swipeSection
             tasksSection
             generalSection
+            privacySection
             aboutSection
         }
         .scrollContentBackground(.hidden)
@@ -79,6 +97,11 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings-density")
         }
+        // Smooth theme/density transitions when the user picks a new value.
+        // `RootView` carries the matching animation on the body so the cascade
+        // through the rest of the tree reads as one continuous motion.
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: theme.raw)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: density.mode.rawValue)
     }
 
     /// Notifications authorization. The system status is read directly from
@@ -191,6 +214,27 @@ struct SettingsView: View {
         }
     }
 
+    /// Swipe Actions — leading/trailing gestures on a task row. Bound to the
+    /// shared `SwipeConfig` so the pick here is what `TaskRowView` reads.
+    @ViewBuilder
+    private var swipeSection: some View {
+        Section("Swipe Actions") {
+            Picker("Leading swipe", selection: $swipe.leadingAction) {
+                ForEach(SwipeAction.allCases, id: \.self) { action in
+                    Text(action.label).tag(action)
+                }
+            }
+            .accessibilityIdentifier("settings-leading-swipe")
+
+            Picker("Trailing swipe", selection: $swipe.trailingAction) {
+                ForEach(SwipeAction.allCases, id: \.self) { action in
+                    Text(action.label).tag(action)
+                }
+            }
+            .accessibilityIdentifier("settings-trailing-swipe")
+        }
+    }
+
     /// Toggles that are stored but not yet read by the rest of the app —
     /// they're honest controls the next iteration of `TaskRowView` and
     /// `Repository.delete` can opt into.
@@ -208,6 +252,25 @@ struct SettingsView: View {
                 Text("Monday").tag(2)
             }
             .accessibilityIdentifier("settings-week-start")
+        }
+    }
+
+    /// Biometric lock toggle. The AppStorage value is the source of truth
+    /// for `TodoApp`'s gate; the binding setter also calls
+    /// `BiometricLock.shared.enable()` / `disable()` so the singleton's own
+    /// `isEnabled` mirror stays in lock-step, and rolls back when the
+    /// device can't actually evaluate biometrics.
+    @ViewBuilder
+    private var privacySection: some View {
+        Section("Privacy") {
+            Toggle("Lock with Face ID", isOn: biometricLockBinding)
+                .accessibilityIdentifier("settings-biometric-lock")
+
+            if !biometricLockFooter.isEmpty {
+                Text(biometricLockFooter)
+                    .font(.footnote)
+                    .foregroundStyle(TK.secondary)
+            }
         }
     }
 
@@ -346,6 +409,45 @@ struct SettingsView: View {
             get: { density.mode.rawValue },
             set: { density.mode = DensityMode(rawValue: $0) ?? .comfortable }
         )
+    }
+
+    /// Biometric lock on/off. The AppStorage write is the gate `TodoApp`
+    /// reads; the setter also pokes `BiometricLock.shared` so its own
+    /// `isEnabled` mirror matches (the singleton stores it under a separate
+    /// `UserDefaults` key, so we can't read it through a binding directly).
+    /// Rolls back when the device can't evaluate biometrics — toggling on
+    /// with no Face ID enrolled would otherwise leave the user stuck on a
+    /// lock screen with no way through.
+    private var biometricLockBinding: Binding<Bool> {
+        Binding(
+            get: { biometricLock },
+            set: { newValue in
+                if newValue {
+                    BiometricLock.shared.refreshAvailability()
+                    guard BiometricLock.shared.availability.canEvaluate else {
+                        biometricLock = false
+                        return
+                    }
+                    try? BiometricLock.shared.enable()
+                    // Mirror back so the toggle reflects whatever enable() decided.
+                    biometricLock = BiometricLock.shared.isEnabled
+                } else {
+                    BiometricLock.shared.disable()
+                    biometricLock = false
+                }
+            }
+        )
+    }
+
+    /// Short status line under the biometric toggle. Empty when biometrics
+    /// are available — the toggle row is self-explanatory in that case.
+    private var biometricLockFooter: String {
+        switch bioLock.availability {
+        case .unknown:                  return "Checking biometric availability…"
+        case .available:                return ""
+        case .notEnrolled:              return "No biometrics enrolled. Set up Face ID, Touch ID, or Optic ID in iOS Settings."
+        case .notAvailable(let reason): return "Biometrics unavailable — \(reason)"
+        }
     }
 
     /// Resolved name for the currently selected default project, or "None".
