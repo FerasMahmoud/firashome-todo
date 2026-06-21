@@ -8,10 +8,24 @@ struct InboxView: View {
     private var openTasks: [TodoTask]
 
     var body: some View {
-        content
-            .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
-            .navigationTitle("Inbox")
-            .navigationBarTitleDisplayMode(.large)
+        VStack(spacing: 0) {
+            // Custom large title — extra leading space (28pt vs iOS default 16pt).
+            HStack(spacing: 0) {
+                Text("Inbox")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(TK.ink)
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, 28)
+            .padding(.trailing, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
+
+            content
+        }
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     @ViewBuilder
