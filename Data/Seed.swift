@@ -16,6 +16,7 @@ enum Seed {
         for t in (try? context.fetch(FetchDescriptor<TodoTask>())) ?? [] { context.delete(t) }
         for p in (try? context.fetch(FetchDescriptor<Project>())) ?? [] { context.delete(p) }
         for l in (try? context.fetch(FetchDescriptor<Label>())) ?? [] { context.delete(l) }
+        for f in (try? context.fetch(FetchDescriptor<SavedFilter>())) ?? [] { context.delete(f) }
 
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
@@ -77,6 +78,14 @@ enum Seed {
         }
 
         [inbox, fittech, personal, shopping].forEach { context.insert($0) }
+
+        // Saved filters — two favorites (P1 / Overdue-equivalents) and one
+        // pinned work bucket, matching what a Todoist user would set up on
+        // day one. Surfaced by `FiltersView` for screenshot/demo.
+        let sf1 = SavedFilter(name: "P1 & urgent", query: "p1 @urgent", colorHex: "E53935", isFavorite: true)
+        let sf2 = SavedFilter(name: "Work — this week", query: "7 days @work", colorHex: "4072D4", isFavorite: true)
+        let sf3 = SavedFilter(name: "No date", query: "no date", colorHex: "8E8E93", isFavorite: false)
+        [sf1, sf2, sf3].forEach { context.insert($0) }
 
         try? context.save()
     }

@@ -194,6 +194,16 @@ extension FilterParser {
         let f4 = parse("")
         guard f4.isEmpty else { return false }
 
+        // Saved-filter smoke: the user-defined filters in `SavedFilter`
+        // use the same parser — assert the multi-axis queries a real user
+        // would save still parse and apply cleanly against an empty list.
+        let saved1 = parse("p1 @urgent")
+        guard saved1.priorities == [1], saved1.labelNames == ["urgent"] else { return false }
+        guard FilterParser.apply(saved1, to: []).isEmpty else { return false }
+
+        let saved2 = parse("7 days @work")
+        guard saved2.dateRange == .nextDays(7), saved2.labelNames == ["work"] else { return false }
+
         return true
     }
 }

@@ -7,6 +7,8 @@ enum NavDestination: Hashable {
     case today
     case upcoming
     case calendar
+    case activity
+    case productivity
     case search
     case filters
     case projects
@@ -136,6 +138,8 @@ struct RootView: View {
         case .inbox:           InboxView()
         case .upcoming:        UpcomingView()
         case .calendar:        CalendarView()
+        case .activity:        ActivityLogView()
+        case .productivity:    ProductivityChartView()
         case .search:          SearchView()
         case .filters:         FiltersView()
         case .projects:        ProjectsView()
@@ -153,8 +157,10 @@ extension NavDestination {
         case "today":    self = .today
         case "inbox":    self = .inbox
         case "upcoming": self = .upcoming
-        case "calendar": self = .calendar
-        case "search":   self = .search
+        case "calendar":     self = .calendar
+        case "activity":     self = .activity
+        case "productivity": self = .productivity
+        case "search":       self = .search
         case "filters":  self = .filters
         case "projects": self = .projects
         case "labels":   self = .labels

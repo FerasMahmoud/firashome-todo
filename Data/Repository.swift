@@ -4,7 +4,15 @@ import SwiftData
 /// Small, intent-revealing helpers over the ModelContext.
 enum Repository {
     static func toggle(_ task: TodoTask, in context: ModelContext) {
-        let willComplete = !task.isCompleted
+        setCompleted(task, to: !task.isCompleted, in: context)
+    }
+
+    /// Mark the task complete or incomplete explicitly. Idempotent — unlike
+    /// `toggle`, this sets a state rather than inverting the current one.
+    /// Used by the bulk-action bar where every selected task should converge
+    /// to the same completion state.
+    static func setCompleted(_ task: TodoTask, to isCompleted: Bool, in context: ModelContext) {
+        let willComplete = isCompleted
         if willComplete {
             task.completedAt = .now
         } else {
@@ -126,6 +134,20 @@ enum Repository {
         SnapshotWriter.refresh(context: context)
     }
 
+    /// Move a task into a different `Project` (or un-project it into Inbox
+    /// by passing `nil`). Persists the relation change, bumps `updatedAt`
+    /// so `SyncClient` LWW picks up the move, and refreshes the widget
+    /// snapshot so counts across the sidebar + project views update in the
+    /// same frame. Caller is responsible for skipping when the task is
+    /// already in the destination (the sidebar drop handler guards on
+    /// `task.project?.id != project?.id`).
+    static func setProject(_ task: TodoTask, to project: Project?, in context: ModelContext) {
+        task.project = project
+        task.updatedAt = .now
+        try? context.save()
+        SnapshotWriter.refresh(context: context)
+    }
+
     static func tasks(dueOn day: Date, in context: ModelContext) -> [TodoTask] {
         let cal = Calendar.current
         let start = cal.startOfDay(for: day)
@@ -173,4 +195,46 @@ enum Repository {
         try? context.save()
         NotificationManager.shared.schedule(for: next)
     }
+
+    // MARK: - Saved filters
+
+    /// Insert a new `SavedFilter` and persist. Defaults to the neutral gray
+    /// hex; views that own the editor sheet choose the color from the
+    /// palette. No `SnapshotWriter.refresh` — saved filters are not part of
+    /// the widget timeline.
+    @discardableResult
+    static func addSavedFilter(
+        name: String,
+        query: String,
+        colorHex: String = "8E8E93",
+        isFavorite: Bool = false,
+        in context: ModelContext
+    ) -> SavedFilter {
+        let filter = SavedFilter(
+            name: name,
+            query: query,
+            colorHex: colorHex,
+            isFavorite: isFavorite
+        )
+        context.insert(filter)
+        try? context.save()
+        return filter
+    }
+
+    /// Toggle the `isFavorite` flag on `filter`. Persists the change. Used
+    /// by the list row's favorite button so the user can pin a filter
+    /// without entering the editor.
+    static func setFavorite(_ filter: SavedFilter, to value: Bool, in context: ModelContext) {
+        guard filter.isFavorite != value else { return }
+        filter.isFavorite = value
+        try? context.save()
+    }
+
+    /// Delete `filter` from the store. Caller is responsible for any
+    /// confirmation UI; this is the persistence half.
+    static func deleteSavedFilter(_ filter: SavedFilter, in context: ModelContext) {
+        context.delete(filter)
+        try? context.save()
+    }
+}
 }

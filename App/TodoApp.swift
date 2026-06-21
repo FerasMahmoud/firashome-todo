@@ -7,7 +7,7 @@ struct TodoApp: App {
     @AppStorage("onboarded") private var onboarded = false
 
     init() {
-        let schema = Schema([TodoTask.self, Project.self, Label.self, Subtask.self])
+        let schema = Schema([TodoTask.self, Project.self, Label.self, Subtask.self, SavedFilter.self])
         let config = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false

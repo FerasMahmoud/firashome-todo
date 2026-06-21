@@ -27,11 +27,22 @@ struct TaskDetailView: View {
     @State private var hasDueTime: Bool
     @State private var showDeleteConfirm: Bool = false
     @State private var newSubtask: String = ""
+    /// Default time pre-selected in the add-reminder DatePicker — tomorrow
+    /// 9:00am. The binding's `set` resets back to this after each add so a
+    /// single picker can stamp multiple reminders in succession.
+    @State private var newReminderDate: Date = TaskDetailView.defaultNewReminderDate
 
     init(task: TodoTask) {
         self.task = task
         self._hasDueDate = State(initialValue: task.dueDate != nil)
         self._hasDueTime = State(initialValue: task.dueTime != nil)
+    }
+
+    /// Tomorrow 9:00am — the default offset for the add-reminder DatePicker.
+    private static var defaultNewReminderDate: Date {
+        let cal = Calendar.current
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: .now)) ?? .now
+        return cal.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? .now
     }
 
     var body: some View {
@@ -44,6 +55,7 @@ struct TaskDetailView: View {
                 subtasksCard(task: task)
                 projectCard(task: task)
                 dueCard(task: task)
+                remindersCard(task: task)
                 priorityCard(task: task)
                 recurrenceCard(task: task)
                 metaFooter
@@ -386,7 +398,108 @@ struct TaskDetailView: View {
         )
     }
 
-    // MARK: - Priority
+    // MARK: - Reminders
+
+    /// Reminders card — multiple date-stamped bells on the task, distinct
+    /// from the single `dueTime` notify-toggle in the due card above. Each
+    /// existing reminder renders as a swipe-to-reveal row (left-swipe →
+    /// red "Delete" button, like iOS Mail). The footer row is a DatePicker
+    /// bound to a custom Binding whose `set` appends a new Reminder and
+    /// resets the picker back to tomorrow 9:00am so the user can stamp
+    /// several in a row.
+    private func remindersCard(task: TodoTask) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "bell.badge")
+                    .font(TK.sectionHeader)
+                    .foregroundStyle(TK.secondary)
+                sectionLabel("Reminders")
+                Spacer()
+                let n = task.reminders.count
+                if n > 0 {
+                    Text("\(n)")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(TK.secondary)
+                        .monospacedDigit()
+                        .accessibilityLabel("\(n) reminders")
+                }
+            }
+
+            if task.reminders.isEmpty {
+                Text("No reminders yet")
+                    .font(TK.subhead)
+                    .foregroundStyle(TK.secondary)
+                    .padding(.vertical, 2)
+                    .accessibilityIdentifier("task-detail-reminders-empty")
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(task.reminders.sorted(by: { $0.date < $1.date })) { reminder in
+                        ReminderRow(reminder: reminder) {
+                            deleteReminder(reminder)
+                        }
+                    }
+                }
+            }
+
+            addReminderRow
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(TK.card, in: RoundedRectangle(cornerRadius: TK.rCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
+                .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
+        )
+        .accessibilityIdentifier("task-detail-reminders-card")
+    }
+
+    /// Footer row of the reminders card. The DatePicker's selection is
+    /// wrapped in a Binding whose `set` performs the append + reset, so
+    /// every distinct user pick = exactly one new Reminder with no extra
+    /// confirm button.
+    private var addReminderRow: some View {
+        let addBinding = Binding<Date>(
+            get: { newReminderDate },
+            set: { newDate in
+                addReminder(at: newDate)
+                // Reset the picker back to the default so the next pick
+                // registers as a fresh change (avoids duplicate fires).
+                newReminderDate = TaskDetailView.defaultNewReminderDate
+            }
+        )
+        return HStack(spacing: 8) {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(TK.accent)
+                .accessibilityHidden(true)
+            DatePicker(
+                "Add reminder",
+                selection: addBinding,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.compact)
+            .labelsHidden()
+            .tint(TK.accent)
+            .accessibilityIdentifier("task-detail-add-reminder")
+        }
+        .padding(.top, 4)
+    }
+
+    private func addReminder(at date: Date) {
+        let reminder = Reminder(date: date)
+        reminder.task = task
+        task.reminders.append(reminder)
+        context.insert(reminder)
+        try? context.save()
+    }
+
+    private func deleteReminder(_ reminder: Reminder) {
+        task.reminders.removeAll { $0.id == reminder.id }
+        context.delete(reminder)
+        try? context.save()
+    }
+
+// MARK: - Priority
 
     private func priorityCard(task: TodoTask) -> some View {
         @Bindable var task = task
@@ -593,5 +706,103 @@ struct TaskDetailView: View {
 }
 
 // MARK: - Preview
+
+
+// MARK: - ReminderRow
+
+/// One reminder row inside the reminders card. The visible row is offset on
+/// the X axis by a DragGesture; pulling it past ~44pt reveals a red "Delete"
+/// affordance behind it. Releases past the threshold snap fully open, releases
+/// short snap closed. A tap on an open row closes it. Vertical drags are
+/// ignored so the parent ScrollView keeps scrolling.
+private struct ReminderRow: View {
+    let reminder: Reminder
+    let onDelete: () -> Void
+
+    @State private var offset: CGFloat = 0
+    @State private var dragStart: CGFloat = 0
+    private static let openX: CGFloat = -88
+    private static let threshold: CGFloat = -44
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            deleteButton
+            rowContent
+        }
+        .frame(minHeight: 36)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var deleteButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { onDelete() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Delete")
+                    .font(TK.sectionHeader)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .frame(maxHeight: .infinity)
+            .background(TK.accent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Delete reminder")
+        .accessibilityIdentifier("reminder-delete")
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "bell.fill")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(TK.accent)
+                .frame(width: 18)
+                .accessibilityHidden(true)
+            Text(reminder.date.formatted(.dateTime.weekday(.abbreviated).day().month().hour().minute()))
+                .font(TK.body)
+                .foregroundStyle(TK.ink)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(TK.card)
+        .contentShape(Rectangle())
+        .offset(x: offset)
+        .gesture(
+            DragGesture(minimumDistance: 8, coordinateSpace: .local)
+                .onChanged { value in
+                    // Only react when horizontal motion dominates — keeps
+                    // vertical scrolling inside the parent ScrollView snappy.
+                    guard abs(value.translation.width) > abs(value.translation.height) * 1.4 else { return }
+                    let proposed = dragStart + value.translation.width
+                    offset = min(0, max(Self.openX, proposed))
+                }
+                .onEnded { value in
+                    let horizontal = abs(value.translation.width) > abs(value.translation.height) * 1.4
+                    guard horizontal else { return }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        offset = offset < Self.threshold ? Self.openX : 0
+                        dragStart = offset
+                    }
+                }
+        )
+        .onTapGesture {
+            // Tap on an open row closes it. Taps on a closed row are
+            // ignored here so other gestures (DatePicker focus, etc.)
+            // remain unaffected.
+            guard offset < 0 else { return }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                offset = 0
+                dragStart = 0
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Reminder at \(reminder.date.formatted(.dateTime.weekday(.wide).day().month().hour().minute()))")
+        .accessibilityHint("Swipe left to delete")
+        .accessibilityIdentifier("reminder-row")
+    }
+}
 
 

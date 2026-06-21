@@ -24,6 +24,30 @@ struct ProjectDetailView: View {
     /// Disclosure state for the "X completed" section.
     @State private var showCompleted = false
 
+    /// Tier-2 #8 — active view for this project (List / Board / Calendar).
+    /// Persisted per project via UserDefaults, defaulting to List. The
+    /// initial value is read once in `init`; subsequent changes are written
+    /// back through `.onChange(of: viewMode)` so the choice survives relaunch.
+    ///
+    /// Why not `@AppStorage`? Its key argument must be a compile-time string
+    /// literal, but the key here embeds the runtime `projectID`. We therefore
+    /// drive a plain `@State` and bridge to UserDefaults manually.
+    @State private var viewMode: ViewMode
+
+    /// UserDefaults key for this project's chosen view mode. Keyed by the
+    /// project UUID so each project remembers its own selection independently
+    /// — switching views in one project does not affect another.
+    private var viewModeStorageKey: String {
+        "project-view-mode-\(projectID.uuidString)"
+    }
+
+    init(projectID: UUID) {
+        self.projectID = projectID
+        let key = "project-view-mode-\(projectID.uuidString)"
+        let raw = UserDefaults.standard.string(forKey: key) ?? ViewMode.list.rawValue
+        self._viewMode = State(initialValue: ViewMode(rawValue: raw) ?? .list)
+    }
+
     // MARK: - View-local types
 
     /// One visual block in the project list: either "un-sectioned tasks under
@@ -35,6 +59,27 @@ struct ProjectDetailView: View {
         let id: String
         let name: String
         let tasks: [TodoTask]
+    }
+
+    /// Which body the project detail screen renders. Persisted as a raw
+    /// string in UserDefaults (via `init` + `.onChange` above) so a future
+    /// case added in a newer build falls back to List on older builds
+    /// rather than crashing.
+    private enum ViewMode: String, CaseIterable, Identifiable {
+        case list = "list"
+        case board = "board"
+        case calendar = "calendar"
+
+        var id: String { rawValue }
+
+        /// Human-readable label rendered in the segmented Picker.
+        var label: String {
+            switch self {
+            case .list: return "List"
+            case .board: return "Board"
+            case .calendar: return "Calendar"
+            }
+        }
     }
 
     // MARK: - Derived state
@@ -128,18 +173,47 @@ struct ProjectDetailView: View {
                     .accessibilityIdentifier("project-title")
                     .accessibilityLabel("Project \(project.name)")
                 }
+                // View-mode switcher (Tier-2 #8). Per-project choice,
+                // persisted in UserDefaults via init + onChange below.
+                // Default = List, so the original list-and-section rendering
+                // is preserved when the key is absent from UserDefaults.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Picker("View mode", selection: $viewMode) {
+                        ForEach(ViewMode.allCases) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                    .accessibilityIdentifier("project-view-mode-picker")
+                    .accessibilityLabel("Project view mode")
+                }
             }
+        }
+        .onChange(of: viewMode) { _, newValue in
+            UserDefaults.standard.set(newValue.rawValue, forKey: viewModeStorageKey)
         }
     }
 
     // MARK: - Content routing
 
+    /// Dispatches the body to one of three renderers based on the persisted
+    /// `viewMode`. List keeps the original empty-state branch and section
+    /// layout (no behavior change for the default mode); Board and Calendar
+    /// hand off to the dedicated view, which owns its own loading / empty UI.
     @ViewBuilder
     private func content(for project: Project) -> some View {
-        if projectTasks.isEmpty {
-            emptyState(for: project)
-        } else {
-            taskList(for: project)
+        switch viewMode {
+        case .list:
+            if projectTasks.isEmpty {
+                emptyState(for: project)
+            } else {
+                taskList(for: project)
+            }
+        case .board:
+            BoardView(project: project)
+        case .calendar:
+            CalendarView()
         }
     }
 
