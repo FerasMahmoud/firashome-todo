@@ -1,89 +1,60 @@
 import SwiftUI
 
-/// First-launch walkthrough — a 4-page paged intro shown by `TodoApp` until
-/// the user finishes or skips. Writes `hasOnboarded` to `UserDefaults`; once
-/// set, `TodoApp` re-renders into `RootView()` and onboarding never reappears.
+/// First-launch walkthrough — a 3-page paged intro shown by `TodoApp` until
+/// the user taps Continue on the last page. Writes `onboarded` to
+/// `UserDefaults`; once set, `TodoApp` re-renders into `RootView()` and
+/// onboarding never reappears.
 ///
 /// ponytail: ceiling — if we ever need programmatic re-entry ("Show tour
 /// again" from Settings), route through a small `OnboardingCoordinator`
 /// instead of swapping the root view from here.
 struct OnboardingView: View {
-    @AppStorage("hasOnboarded") private var hasOnboarded = false
+    @AppStorage("onboarded") private var onboarded = false
     @State private var page: Int = 0
 
-    private let pageCount = 4
+    private let pageCount = 3
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            // Paged content sits behind the skip / continue overlays.
-            TabView(selection: $page) {
-                page(
-                    icon: "checkmark.circle.fill",
-                    tint: TK.accent,
-                    title: "Welcome to Tasks",
-                    body: "A focused way to capture what matters."
-                )
-                .tag(0)
+        TabView(selection: $page) {
+            page(
+                icon: "checkmark.circle.fill",
+                tint: TK.accent,
+                title: "Welcome",
+                body: "A focused way to capture what matters."
+            )
+            .tag(0)
 
-                page(
-                    icon: "tray.fill",
-                    tint: Color(hex: "246FE0"),
-                    title: "Inbox & projects",
-                    body: "The Inbox catches everything. Projects give tasks a home."
-                )
-                .tag(1)
+            page(
+                icon: "calendar",
+                tint: TK.priority(3),
+                title: "Organize your day",
+                body: "Today, upcoming, and projects — all at a glance."
+            )
+            .tag(1)
 
-                page(
-                    icon: "sun.max.fill",
-                    tint: TK.priority(3),
-                    title: "Today & upcoming",
-                    body: "Plan your day. See what's coming next."
-                )
-                .tag(2)
-
-                page(
-                    icon: "sparkles",
-                    tint: TK.ink,
-                    title: "You're all set",
-                    body: "Add your first task from the + bar at the bottom."
-                )
-                .tag(3)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
-            .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
-
-            // Skip — always visible, top trailing.
-            Button {
-                hasOnboarded = true
-            } label: {
-                Text("Skip")
-                    .font(TK.subhead)
-                    .foregroundStyle(TK.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-            }
-            .padding(.top, 12)
-            .padding(.trailing, 8)
-            .accessibilityIdentifier("onboarding-skip")
-            .accessibilityLabel("Skip onboarding")
+            page(
+                icon: "sparkles",
+                tint: TK.ink,
+                title: "Get started",
+                body: "Tap + to add your first task."
+            )
+            .tag(2)
         }
+        .tabViewStyle(.page(indexDisplayMode: .always))
+        .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
         .safeAreaInset(edge: .bottom) {
-            // Primary CTA — last page reads "Get started" instead of "Continue".
+            // Primary CTA — advances on early pages, finishes on last.
             Button {
                 if page < pageCount - 1 {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         page += 1
                     }
                 } else {
-                    hasOnboarded = true
-                    // Best-effort: prompt for notifications now that the user
-                    // has finished onboarding. No-op / silent if denied.
-                    NotificationManager.shared.requestPermissionIfNeeded()
+                    onboarded = true
                 }
             } label: {
-                Text(page < pageCount - 1 ? "Continue" : "Get started")
+                Text("Continue")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -96,14 +67,23 @@ struct OnboardingView: View {
             .padding(.bottom, 8)
             .background { if TK.isDarkGlass { Color.clear } else { TK.canvas } }
             .accessibilityIdentifier("onboarding-continue")
-            .accessibilityLabel(page < pageCount - 1 ? "Continue" : "Get started")
+            .accessibilityLabel("Continue")
+        }
+        .task(id: onboarded) {
+            // Ask for notification permission only after the user finishes
+            // onboarding. Popping the system prompt before they know what
+            // the app does is bad UX — the gate in `TodoApp` already defers
+            // first-launch work to here.
+            if onboarded {
+                NotificationManager.shared.requestPermissionIfNeeded()
+            }
         }
     }
 
     // MARK: - Page
 
-    /// One onboarding page: hero icon, title, body copy. Padded to leave room
-    /// for the system page indicator and the bottom CTA.
+    /// One onboarding page: hero icon, title, body copy. Reserves space at
+    /// the bottom so content doesn't sit under the page dots / CTA.
     @ViewBuilder
     private func page(icon: String,
                       tint: Color,
@@ -131,8 +111,14 @@ struct OnboardingView: View {
             .accessibilityElement(children: .combine)
 
             Spacer(minLength: 0)
+            // Reserve space so content doesn't sit under the page dots / CTA.
+            Color.clear.frame(height: 96)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { if TK.isDarkGlass { PlanetLayer() } else { TK.canvas } }
     }
+}
+
+#Preview {
+    OnboardingView()
 }

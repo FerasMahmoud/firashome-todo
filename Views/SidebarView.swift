@@ -21,6 +21,12 @@ struct SidebarView: View {
         List(selection: $selection) {
             // Smart views — no section header (matches Todoist sidebar).
             Section {
+                smartRow(.search,
+                         icon: "magnifyingglass",
+                         label: "Search",
+                         tint: TK.ink,
+                         count: nil,
+                         id: "nav-search")
                 smartRow(.inbox,
                          icon: "tray",
                          label: "Inbox",
@@ -39,6 +45,12 @@ struct SidebarView: View {
                          tint: TK.ink,
                          count: upcomingCount,
                          id: "nav-upcoming")
+                smartRow(.calendar,
+                         icon: "calendar.day.timeline.left",
+                         label: "Calendar",
+                         tint: TK.ink,
+                         count: nil,
+                         id: "nav-calendar")
                 smartRow(.filters,
                          icon: "line.3.horizontal.decrease",
                          label: "Filters",

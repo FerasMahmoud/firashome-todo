@@ -35,8 +35,8 @@ enum Seed {
         let personal = Project(name: "Personal", colorHex: "9C27B0", order: 2)
         let shopping = Project(name: "Shopping", colorHex: "F99B17", order: 3)
 
-        func task(_ title: String, note: String = "", due: Date? = nil, priority: Int = 4, order: Int, project: Project?, labels: [Label] = []) {
-            let t = TodoTask(title: title, note: note, dueDate: due, priority: priority, order: order, project: project, labels: labels)
+        func task(_ title: String, note: String = "", due: Date? = nil, priority: Int = 4, order: Int, project: Project?, labels: [Label] = [], recurrence: String? = nil) {
+            let t = TodoTask(title: title, note: note, dueDate: due, priority: priority, order: order, project: project, labels: labels, recurrence: recurrence)
             context.insert(t)
         }
 
@@ -44,7 +44,7 @@ enum Seed {
         task("Review Qiddiya drone survey brief", note: "Section 3 — flight plan coverage", due: today, priority: 1, order: 0, project: fittech, labels: [urgent, work])
         task("Call Bullivant HSE contact", due: today, priority: 2, order: 1, project: fittech, labels: [work])
         task("Reply to investor email", due: today, priority: 3, order: 2, project: inbox, labels: [urgent])
-        task("Gym — leg day", due: today, order: 3, project: personal, labels: [home])
+        task("Gym — leg day", due: today, order: 3, project: personal, labels: [home], recurrence: "daily")
         task("Buy coffee beans", due: today, order: 4, project: shopping, labels: [errands])
 
         // Upcoming
@@ -52,6 +52,7 @@ enum Seed {
         task("ViewKeeper landing hero video review", due: tomorrow, order: 1, project: fittech)
         task("Renew domain portfolio", due: inThreeDays, order: 2, project: personal)
         task("Plan weekend trip to Riyadh", due: nextWeek, order: 3, project: personal, labels: [home])
+        task("Weekly review of trader P&L", note: "Snapshot the basket, rebalance hedges", due: nextWeek, order: 4, project: personal, labels: [work], recurrence: "weekly")
 
         // No date / later
         task("Read Elite CV engineer techniques", priority: 4, order: 0, project: fittech)

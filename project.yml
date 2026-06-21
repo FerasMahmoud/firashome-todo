@@ -28,6 +28,7 @@ targets:
       - path: Data
       - path: Views
       - path: Sync
+      - path: Services
       - path: Shared
       - path: Support
     settings:

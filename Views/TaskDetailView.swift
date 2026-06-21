@@ -45,6 +45,7 @@ struct TaskDetailView: View {
                 projectCard(task: task)
                 dueCard(task: task)
                 priorityCard(task: task)
+                recurrenceCard(task: task)
                 metaFooter
                 deleteButton
             }
@@ -75,6 +76,7 @@ struct TaskDetailView: View {
         .onChange(of: task.title) { _, _ in persist() }
         .onChange(of: task.note) { _, _ in persist() }
         .onChange(of: task.priority) { _, _ in persist() }
+        .onChange(of: task.recurrence) { _, _ in persist() }
         .onChange(of: task.dueDate) { _, _ in reschedule() }
         .onChange(of: task.dueTime) { _, _ in reschedule() }
         .onChange(of: task.project) { _, _ in reschedule() }
@@ -411,6 +413,65 @@ struct TaskDetailView: View {
             RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
                 .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
         )
+    }
+
+    // MARK: - Recurrence
+
+    private func recurrenceCard(task: TodoTask) -> some View {
+        @Bindable var task = task
+        return VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("Repeat")
+            Menu {
+                Button {
+                    task.recurrence = nil
+                } label: {
+                    HStack {
+                        if task.recurrence == nil { Image(systemName: "checkmark") }
+                        Text("No repeat")
+                    }
+                }
+                Divider()
+                ForEach(RecurrenceKind.allCases) { kind in
+                    Button {
+                        task.recurrence = kind.storageValue
+                    } label: {
+                        HStack {
+                            if task.recurrence == kind.storageValue { Image(systemName: "checkmark") }
+                            Image(systemName: kind.icon)
+                            Text(kind.label)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: task.recurrence == nil ? "arrow.clockwise" : "arrow.clockwise.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(task.recurrence == nil ? TK.secondary : TK.accent)
+                    Text(recurrenceLabel(task.recurrence))
+                        .font(TK.body)
+                        .foregroundStyle(task.recurrence == nil ? TK.secondary : TK.ink)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(TK.secondary)
+                }
+                .padding(.vertical, 2)
+                .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("task-detail-recurrence")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(TK.card, in: RoundedRectangle(cornerRadius: TK.rCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
+                .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
+        )
+    }
+
+    private func recurrenceLabel(_ raw: String?) -> String {
+        guard let raw, let kind = RecurrenceKind(rawValue: raw) else { return "No repeat" }
+        return kind.label
     }
 
     // MARK: - Meta footer

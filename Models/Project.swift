@@ -16,6 +16,10 @@ final class Project {
     @Relationship(deleteRule: .cascade, inverse: \TaskSection.project)
     var sections: [TaskSection] = []
 
+    var parent: Project? = nil
+    @Relationship(deleteRule: .nullify, inverse: \Project.parent)
+    var children: [Project] = []
+
     init(name: String, colorHex: String = "8E8E93", order: Int = 0, isFavorite: Bool = false) {
         self.id = UUID()
         self.name = name

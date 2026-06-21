@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import UIKit
+import UserNotifications
 
 /// App preferences. Surfaces controls that were previously scattered or
 /// unreachable: theme (also in `AccountView`), row density (only this screen
@@ -21,6 +23,9 @@ struct SettingsView: View {
     @AppStorage("defaultPriority") private var defaultPriority: Int = 4
     @AppStorage("defaultDue") private var defaultDueRaw: String = DefaultDue.none.rawValue
     @AppStorage("defaultProjectID") private var defaultProjectIDRaw: String = ""
+    /// Persisted app-icon pick. Defaults to `primary`; the alternate
+    /// `AppIcon-Dark` / `AppIcon-Color` entries land in the asset catalog later.
+    @AppStorage("appIcon") private var appIconRaw: String = AppIconOption.primary.id
 
     @State private var pickingDefaultProject = false
     @State private var pickingAppIcon = false
@@ -357,6 +362,42 @@ struct SettingsView: View {
         let b = info?["CFBundleVersion"] as? String ?? "—"
         return "\(v) · \(b)"
     }
+
+    // MARK: - Notifications helpers
+
+    /// Pull the live authorization status so the row reflects what the
+    /// system shows in Settings.app. Read on appear and after every
+    /// `requestAuthorization` round-trip.
+    private func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationStatus = settings.authorizationStatus
+    }
+
+    // MARK: - App-icon helpers
+
+    /// Stable id for the icon currently in use. Source of truth is
+    /// `@AppStorage("appIcon")` — we mirror it to iOS via `setAlternateIconName`
+    /// but read back from `UserDefaults` so the picker matches what was picked
+    /// even if iOS hasn't finished swapping the home-screen badge yet.
+    private var currentIconKey: String {
+        appIconRaw
+    }
+
+    /// User-facing label for the currently selected icon.
+    private var currentAppIconName: String {
+        AppIconOption.all.first(where: { $0.id == currentIconKey })?.label ?? AppIconOption.primary.label
+    }
+
+    /// Apply the chosen alternate icon. Writes the pick to `appIconRaw`
+    /// first so the UI stays in sync, then forwards to iOS. The completion
+    /// handler is left at its default (`nil`) — the only failure mode is
+    /// "icon name not in Info.plist", which we control, and `simulator`
+    /// never advertises support so the guard short-circuits cleanly.
+    private func setAppIcon(_ name: String?) {
+        appIconRaw = name ?? AppIconOption.primary.id
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+        UIApplication.shared.setAlternateIconName(name)
+    }
 }
 
 // MARK: - Default due
@@ -375,4 +416,51 @@ private enum DefaultDue: String, CaseIterable, Identifiable {
         case .tomorrow: "Tomorrow"
         }
     }
+}
+
+// MARK: - Notifications status
+
+private extension UNAuthorizationStatus {
+    /// Short user-facing label for the row in Settings.
+    var label: String {
+        switch self {
+        case .notDetermined: "Not requested"
+        case .denied:        "Turned off in Settings"
+        case .authorized:    "Allowed"
+        case .provisional:   "Provisional"
+        case .ephemeral:     "Ephemeral"
+        @unknown default:    "Unknown"
+        }
+    }
+}
+
+// MARK: - App icon options
+
+/// Catalog of icons the user can pick. The primary icon has no name
+/// (`setAlternateIconName(nil)`); alternates carry the name declared in
+/// `CFBundleIcons.CFBundleAlternateIcons`. Extend `alternates` once alt
+/// icons are added to the asset catalog and Info.plist.
+private struct AppIconOption: Identifiable {
+    let id: String           // matches `UIApplication.alternateIconName` or "primary"
+    let label: String        // shown in the picker
+    let symbol: String       // SF Symbol used in the row
+    let name: String?        // value passed to `setAlternateIconName`
+
+    static let primary = AppIconOption(
+        id: "primary",
+        label: "Default",
+        symbol: "app",
+        name: nil
+    )
+
+    /// ponytail: ceiling — when more alt icons ship, add one entry here per icon.
+    /// The picker auto-renders whatever's in this list; nothing else moves.
+    /// The `AppIcon-Dark` / `AppIcon-Color` assets land in a follow-up Xcode task —
+    /// `setAlternateIconName` already routes by these names.
+    static let alternates: [AppIconOption] = [
+        AppIconOption(id: "AppIcon-Dark",  label: "Dark",  symbol: "moon.fill",         name: "AppIcon-Dark"),
+        AppIconOption(id: "AppIcon-Color", label: "Color", symbol: "paintpalette.fill", name: "AppIcon-Color"),
+    ]
+
+    static var all: [AppIconOption] { [primary] + alternates }
 }
