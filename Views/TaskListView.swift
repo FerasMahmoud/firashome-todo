@@ -8,8 +8,6 @@ import SwiftData
 /// `header`; callers decide whether the rows appear grouped under a section title or as a
 /// flat list.
 struct TaskListView: View {
-    @Environment(\.modelContext) private var context
-
     let tasks: [TodoTask]
     let header: String?
 
@@ -51,30 +49,7 @@ struct TaskListView: View {
             TaskRowView(task: task)
                 .listRowBackground(TK.canvas)
                 .listRowSeparatorTint(TK.hairlineSoft)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        Repository.delete(task, in: context)
-                    } label: {
-                        HStack { Image(systemName: "trash"); Text("Delete") }
-                    }
-                    .tint(TK.accent)
-                    .accessibilityIdentifier("task-row-delete")
-                }
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                    Button {
-                        Repository.toggle(task, in: context)
-                    } label: {
-                        HStack {
-                            Image(systemName: task.isCompleted
-                                ? "arrow.uturn.backward.circle"
-                                : "checkmark.circle.fill")
-                            Text(task.isCompleted ? "Undo" : "Complete")
-                        }
-                    }
-                    // Todoist-complete green — kept inline so we don't widen the global TK palette.
-                    .tint(Color(red: 0.18, green: 0.69, blue: 0.34))
-                    .accessibilityIdentifier("task-row-complete")
-                }
+                // swipe + context-menu actions live on TaskRowView now.
         }
     }
 }

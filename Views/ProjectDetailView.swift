@@ -15,7 +15,6 @@ struct ProjectDetailView: View {
     /// store on every render via `@Query`.
     let projectID: UUID
 
-    @Environment(\.modelContext) private var context
     @Query(sort: \Project.order) private var allProjects: [Project]
     @Query(sort: \TodoTask.order) private var allTasks: [TodoTask]
 
@@ -167,9 +166,8 @@ struct ProjectDetailView: View {
 
     // MARK: - Row
 
-    /// A row wrapped in a `NavigationLink` to the task editor, plus leading
-    /// "Complete / Undo" and trailing "Delete" swipe actions — matches the
-    /// gestures Todoist exposes on every list row.
+    /// A row wrapped in a `NavigationLink` to the task editor.
+    /// Swipe + context-menu actions live on TaskRowView now (shared with every list).
     @ViewBuilder
     private func rowLink(for task: TodoTask) -> some View {
         NavigationLink {
@@ -177,26 +175,6 @@ struct ProjectDetailView: View {
         } label: {
             TaskRowView(task: task)
             .listRowSeparatorTint(TK.hairlineSoft)
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                Repository.delete(task, in: context)
-            } label: {
-                HStack { Image(systemName: "trash"); Text("Delete") }
-            }
-            .accessibilityIdentifier("project-swipe-delete-\(task.id.uuidString.prefix(8))")
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                Repository.toggle(task, in: context)
-            } label: {
-                HStack {
-                    Image(systemName: task.isCompleted ? "arrow.uturn.backward" : "checkmark")
-                    Text(task.isCompleted ? "Undo" : "Complete")
-                }
-            }
-            .tint(.green)
-            .accessibilityIdentifier("project-swipe-complete-\(task.id.uuidString.prefix(8))")
         }
         .accessibilityIdentifier("project-row-\(task.id.uuidString.prefix(8))")
     }

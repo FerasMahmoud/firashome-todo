@@ -41,9 +41,45 @@ struct TaskRowView: View {
             }
         }
         .contentShape(Rectangle())
+        // Touch: swipe-left → Delete, swipe-right → Complete/Undo.
+        // Applied on the row itself so EVERY list using TaskRowView (Inbox,
+        // Today, Upcoming, Filters, Project detail, TaskListView) gets the
+        // same actions — single source of truth.
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                Repository.delete(task, in: context)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(TK.accent)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                Repository.toggle(task, in: context)
+            } label: {
+                Label(task.isCompleted ? "Undo" : "Complete",
+                      systemImage: task.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
+            }
+            .tint(Color(red: 0.18, green: 0.69, blue: 0.34))
+        }
+        // PC / mouse: right-click. Touch: long-press. Same actions as swipe
+        // so the row is fully usable without a swipe gesture.
+        .contextMenu {
+            Button {
+                Repository.toggle(task, in: context)
+            } label: {
+                Label(task.isCompleted ? "Mark incomplete" : "Mark complete",
+                      systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark")
+            }
+            Button(role: .destructive) {
+                Repository.delete(task, in: context)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint("Opens task details")
+        .accessibilityHint("Swipe or right-click for actions")
     }
 
     // MARK: - Leading checkbox
