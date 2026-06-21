@@ -78,6 +78,12 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.uitests
         GENERATE_INFOPLIST_FILE: YES
+        # UITest -Runner.app fails to install on the simulator ("Missing
+        # bundle ID") under inherited Manual signing. Simulator UI tests
+        # don't need signing — turn it off so the runner resolves its id.
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
 
 schemes:
   Todo:
