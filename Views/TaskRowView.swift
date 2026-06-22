@@ -70,7 +70,7 @@ struct TaskRowView: View {
             Button {
                 Repository.toggle(task, in: context)
             } label: {
-                Label(task.isCompleted ? "Mark incomplete" : "Mark complete",
+                SwiftUI.Label(task.isCompleted ? "Mark incomplete" : "Mark complete",
                       systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark")
             }
             Button(role: .destructive) {
@@ -132,7 +132,7 @@ struct TaskRowView: View {
             Button {
                 Repository.toggle(task, in: context)
             } label: {
-                Label(task.isCompleted ? "Undo" : "Complete",
+                SwiftUI.Label(task.isCompleted ? "Undo" : "Complete",
                       systemImage: task.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
             }
             .tint(Color(red: 0.18, green: 0.69, blue: 0.34))

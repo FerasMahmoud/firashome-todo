@@ -178,7 +178,7 @@ struct LabelsView: View {
     private func saveLabel() {
         let trimmed = newLabelName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        let label = Label(name: trimmed, colorHex: newLabelColor)
+        let label = SwiftUI.Label(name: trimmed, colorHex: newLabelColor)
         context.insert(label)
         try? context.save()
         newLabelName = ""
