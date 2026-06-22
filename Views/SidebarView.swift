@@ -103,6 +103,18 @@ struct SidebarView: View {
                          tint: Color(hex: "9C27B0"),
                          count: nil,
                          id: "nav-countdowns")
+                smartRow(.lifeCalendar,
+                         icon: "calendar.day.timeline.left",
+                         label: "Life Calendar",
+                         tint: Color(hex: "1B8B6A"),
+                         count: nil,
+                         id: "nav-life-calendar")
+                smartRow(.routine,
+                         icon: "rectangle.split.3x1",
+                         label: "Routine",
+                         tint: Color(hex: "F99B17"),
+                         count: nil,
+                         id: "nav-routine")
             }
 
             // Per-project rows — labeled section, top-level projects first,

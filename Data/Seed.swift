@@ -88,9 +88,9 @@ enum Seed {
         [sf1, sf2, sf3].forEach { context.insert($0) }
 
         // Habits (Life OS)
-        let h1 = Habit(name: "Read Quran", colorHex: "1B8B6A", icon: "book.fill")
-        let h2 = Habit(name: "Workout", colorHex: "F99B17", icon: "figure.run")
-        let h3 = Habit(name: "Deep work 2h", colorHex: "246FE0", icon: "hammer.fill")
+        let h1 = Habit(name: "Read Quran", colorHex: "1B8B6A", icon: "book.fill", timeOfDay: "morning")
+        let h2 = Habit(name: "Workout", colorHex: "F99B17", icon: "figure.run", timeOfDay: "afternoon")
+        let h3 = Habit(name: "Deep work 2h", colorHex: "246FE0", icon: "hammer.fill", timeOfDay: "evening")
         [h1, h2, h3].forEach { context.insert($0) }
 
         // Countdowns (Life OS)

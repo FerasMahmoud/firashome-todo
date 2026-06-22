@@ -17,6 +17,8 @@ enum NavDestination: Hashable {
     case settings
     case habits
     case countdowns
+    case lifeCalendar
+    case routine
     case project(UUID)
 }
 
@@ -159,6 +161,8 @@ struct RootView: View {
         case .settings:        SettingsView()
         case .habits:          HabitsView()
         case .countdowns:      CountdownsView()
+        case .lifeCalendar:    LifeCalendarView()
+        case .routine:         RoutineBoardView()
         case .project(let id): ProjectDetailView(projectID: id)
         }
     }
@@ -181,6 +185,8 @@ extension NavDestination {
         case "settings": self = .settings
         case "habits":   self = .habits
         case "countdowns": self = .countdowns
+        case "lifecalendar": self = .lifeCalendar
+        case "routine":   self = .routine
         default:         return nil
         }
     }

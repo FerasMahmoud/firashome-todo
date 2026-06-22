@@ -13,16 +13,18 @@ final class Habit {
     var icon: String
     var cadence: String       // "daily" (only value for now; future: "weekly")
     var target: Int           // completions per day (always 1 for now)
+    var timeOfDay: String     // "morning" | "afternoon" | "evening" (routine board)
     var createdAt: Date
     var completions: [Date]   // each entry = startOfDay of a done day
 
-    init(name: String, colorHex: String = "1B8B6A", icon: String = "checkmark.circle", cadence: String = "daily", target: Int = 1) {
+    init(name: String, colorHex: String = "1B8B6A", icon: String = "checkmark.circle", cadence: String = "daily", target: Int = 1, timeOfDay: String = "morning") {
         self.id = UUID()
         self.name = name
         self.colorHex = colorHex
         self.icon = icon
         self.cadence = cadence
         self.target = target
+        self.timeOfDay = timeOfDay
         self.createdAt = .now
         self.completions = []
     }
