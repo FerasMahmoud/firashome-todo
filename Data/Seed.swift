@@ -87,6 +87,17 @@ enum Seed {
         let sf3 = SavedFilter(name: "No date", query: "no date", colorHex: "8E8E93", isFavorite: false)
         [sf1, sf2, sf3].forEach { context.insert($0) }
 
+        // Habits (Life OS)
+        let h1 = Habit(name: "Read Quran", colorHex: "1B8B6A", icon: "book.fill")
+        let h2 = Habit(name: "Workout", colorHex: "F99B17", icon: "figure.run")
+        let h3 = Habit(name: "Deep work 2h", colorHex: "246FE0", icon: "hammer.fill")
+        [h1, h2, h3].forEach { context.insert($0) }
+
+        // Countdowns (Life OS)
+        let c1 = CountdownEvent(title: "Qiddiya kickoff", targetDate: nextWeek + 7 * 86400, colorHex: "DC4C4E", icon: "flag.fill")
+        let c2 = CountdownEvent(title: "Eid al-Adha", targetDate: Calendar.current.date(byAdding: .day, value: 40, to: today)!, colorHex: "9C27B0", icon: "calendar")
+        [c1, c2].forEach { context.insert($0) }
+
         try? context.save()
     }
 }

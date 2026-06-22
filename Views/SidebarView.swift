@@ -91,6 +91,18 @@ struct SidebarView: View {
                          tint: TK.ink,
                          count: nil,
                          id: "nav-settings")
+                smartRow(.habits,
+                         icon: "flame.fill",
+                         label: "Habits",
+                         tint: Color(hex: "F99B17"),
+                         count: nil,
+                         id: "nav-habits")
+                smartRow(.countdowns,
+                         icon: "calendar.badge.clock",
+                         label: "Countdowns",
+                         tint: Color(hex: "9C27B0"),
+                         count: nil,
+                         id: "nav-countdowns")
             }
 
             // Per-project rows — labeled section, top-level projects first,
