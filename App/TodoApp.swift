@@ -114,7 +114,7 @@ struct LockOverlayView: View {
                 Image(systemName: lockIcon)
                     .font(.system(size: 56, weight: .light))
                     .foregroundStyle(TK.accent)
-                    .symbolEffect(.pulse, options: .repeat(.continuous))
+                    .symbolEffect(.pulse, options: .repeating)
                     .accessibilityHidden(true)
 
                 Text("Locked")
