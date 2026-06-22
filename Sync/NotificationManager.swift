@@ -65,7 +65,7 @@ final class NotificationManager {
             options: []
         )
         let category = UNNotificationCategory(
-            identifier: categoryIdentifier,
+            identifier: Self.categoryIdentifier,
             actions: [complete, snooze],
             intentIdentifiers: [],
             options: []

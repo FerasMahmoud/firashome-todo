@@ -64,7 +64,7 @@ final class BiometricLock: ObservableObject {
         var label: String {
             switch self {
             case .unknown:                  return "Checking…"
-            case .available(let t):         return Self.displayName(for: t)
+            case .available(let t):         return BiometricLock.displayName(for: t)
             case .notEnrolled:              return "Set up in iOS Settings"
             case .notAvailable(let reason): return reason
             }

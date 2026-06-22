@@ -91,17 +91,28 @@ struct CoachMarksView: View {
 
             VStack(spacing: 16) {
                 if step < Self.tips.count {
-                    TipView(Self.tips[step])
-                        .padding(16)
-                        .background(
-                            TK.card,
-                            in: RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
-                                .stroke(TK.hairlineSoft, lineWidth: 0.5)
-                        )
-                        .shadow(color: TK.ink.opacity(0.12), radius: 18, x: 0, y: 8)
+                    Group {
+                        if #available(iOS 18.0, *) {
+                            TipView(Self.tips[step])
+                        } else {
+                            // TipKit's TipView init needs iOS 18; fall back to a
+                            // plain title + message card on iOS 17.
+                            VStack(alignment: .leading, spacing: 6) {
+                                Self.tips[step].title.font(.headline).foregroundStyle(TK.ink)
+                                Self.tips[step].message?.font(TK.body).foregroundStyle(TK.secondary)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .background(
+                        TK.card,
+                        in: RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: TK.rCard, style: .continuous)
+                            .stroke(TK.hairlineSoft, lineWidth: 0.5)
+                    )
+                    .shadow(color: TK.ink.opacity(0.12), radius: 18, x: 0, y: 8)
                 }
 
                 controls

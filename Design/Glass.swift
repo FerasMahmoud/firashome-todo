@@ -1,23 +1,18 @@
 import SwiftUI
 
-/// iOS 26 Liquid Glass, with a graceful blur fallback for older OS.
+/// Translucent glass-like backgrounds. iOS 26's `.glassEffect` symbol is absent
+/// on the Xcode 16 (iOS 18) SDK used in CI, so we ship the material fallback
+/// unconditionally. Re-enable `.glassEffect` under a `#if compiler(>=6.2)` /
+/// iOS-26-SDK guard once CI runs Xcode 26.
 extension View {
     @ViewBuilder
     func liquidGlass(cornerRadius: CGFloat = 18) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(in: .rect(cornerRadius: cornerRadius, style: .continuous))
-        } else {
-            self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        }
+        self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
-    /// Translucent floating bar (nav / bottom add bar) — glass on iOS 26, material elsewhere.
+    /// Translucent floating bar (nav / bottom add bar).
     @ViewBuilder
     func glassBar() -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(in: .rect(cornerRadius: 0, style: .continuous))
-        } else {
-            self.background(.ultraThinMaterial)
-        }
+        self.background(.ultraThinMaterial)
     }
 }

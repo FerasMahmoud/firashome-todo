@@ -135,11 +135,12 @@ struct BoardView: View {
 
     // MARK: - Card
 
-    private func card(for task: TodoTask) -> some View {
+    /// Visible card content (no drag / a11y wrappers). Extracted so `card(for:)`
+    /// can reuse it for the drag preview WITHOUT recursing into itself (a
+    /// recursive `some View` fails to compile).
+    @ViewBuilder
+    private func cardContent(for task: TodoTask) -> some View {
         HStack(alignment: .top, spacing: 0) {
-            // Priority flag — left-edge colored bar. Mirrors the
-            // `flag.fill` color logic on `TaskRowView` so a glance at
-            // either the list or the board tells the same priority story.
             UnevenRoundedRectangle(
                 topLeadingRadius: TK.rCard,
                 bottomLeadingRadius: TK.rCard,
@@ -175,16 +176,20 @@ struct BoardView: View {
             RoundedRectangle(cornerRadius: TK.rCard)
                 .strokeBorder(TK.hairlineSoft, lineWidth: 0.5)
         )
-        .draggable(task.id.uuidString) {
-            // Drag preview — a dimmed snapshot of the card. Clamped to the
-            // column width so the lift-off image matches the source.
-            card(for: task)
-                .opacity(0.85)
-                .frame(width: columnWidth - 24)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("board-card-\(task.id.uuidString.prefix(8))")
-        .accessibilityLabel(cardAccessibilityLabel(for: task))
+    }
+
+    private func card(for task: TodoTask) -> some View {
+        cardContent(for: task)
+            .draggable(task.id.uuidString) {
+                // Drag preview — a dimmed snapshot of the card, reusing the
+                // extracted content (not a self-call).
+                cardContent(for: task)
+                    .opacity(0.85)
+                    .frame(width: columnWidth - 24)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("board-card-\(task.id.uuidString.prefix(8))")
+            .accessibilityLabel(cardAccessibilityLabel(for: task))
     }
 
     /// Short date string for the card's due line. Same shape as
