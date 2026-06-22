@@ -433,13 +433,13 @@ struct SavedFilterResultView: View {
                     Button {
                         showingEditor = true
                     } label: {
-                        Label("Edit filter", systemImage: "pencil")
+                        SwiftUI.Label("Edit filter", systemImage: "pencil")
                     }
                     .accessibilityIdentifier("savedfilter-result-edit")
                     Button(role: .destructive) {
                         showingDeleteConfirm = true
                     } label: {
-                        Label("Delete filter", systemImage: "trash")
+                        SwiftUI.Label("Delete filter", systemImage: "trash")
                     }
                     .accessibilityIdentifier("savedfilter-result-delete")
                 } label: {

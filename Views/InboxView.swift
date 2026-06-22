@@ -89,7 +89,7 @@ struct InboxView: View {
         Menu {
             Picker("Sort", selection: $sortMode) {
                 ForEach(SortMode.allCases) { mode in
-                    Label(mode.label, systemImage: mode.systemImage)
+                    SwiftUI.Label(mode.label, systemImage: mode.systemImage)
                         .tag(mode)
                 }
             }

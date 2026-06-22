@@ -76,7 +76,7 @@ struct TaskRowView: View {
             Button(role: .destructive) {
                 Repository.delete(task, in: context)
             } label: {
-                Label("Delete", systemImage: "trash")
+                SwiftUI.Label("Delete", systemImage: "trash")
             }
         }
         .accessibilityElement(children: .combine)
@@ -140,14 +140,14 @@ struct TaskRowView: View {
             Button(role: .destructive) {
                 Repository.delete(task, in: context)
             } label: {
-                Label("Delete", systemImage: "trash")
+                SwiftUI.Label("Delete", systemImage: "trash")
             }
             .tint(TK.accent)
         case .archive:
             Button {
                 Repository.archive(task, in: context)
             } label: {
-                Label("Archive", systemImage: "archivebox")
+                SwiftUI.Label("Archive", systemImage: "archivebox")
             }
             // Warm amber — distinct from complete-green and delete-red so the
             // three swipe actions read at a glance on any theme.
