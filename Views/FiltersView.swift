@@ -15,11 +15,17 @@ struct FiltersView: View {
     /// User-defined saved filters. Favorites surface first, then alphabetical
     /// by name. SwiftData drives the list — a new row from the "new filter"
     /// sheet shows up here as soon as `modelContext.insert` lands.
-    @Query(sort: [
-        SortDescriptor(\SavedFilter.isFavorite, ascending: false),
-        SortDescriptor(\SavedFilter.name)
-    ])
+    @Query(sort: [SortDescriptor(\SavedFilter.name)])
     private var savedFilters: [SavedFilter]
+
+    /// Favorites first, then alphabetical. Done in-memory because SwiftData's
+    /// `SortDescriptor` on a Bool keypath is ambiguous in the @Query macro.
+    private var orderedFilters: [SavedFilter] {
+        savedFilters.sorted { a, b in
+            if a.isFavorite != b.isFavorite { return a.isFavorite }
+            return a.name < b.name
+        }
+    }
 
     /// Used by the saved-filter swipe-to-delete action and by the editor
     /// sheet's `commit()` (passed implicitly via `@Environment`).
@@ -43,9 +49,9 @@ struct FiltersView: View {
                 // — also reachable from the toolbar for thumb reach. The
                 // section is omitted entirely when the user has no filters
                 // yet, so the first launch is just the smart-filter rows.
-                if !savedFilters.isEmpty {
+                if !orderedFilters.isEmpty {
                     Section {
-                        ForEach(savedFilters) { sf in
+                        ForEach(orderedFilters) { sf in
                             NavigationLink(value: sf) {
                                 savedFilterRow(sf)
                             }
