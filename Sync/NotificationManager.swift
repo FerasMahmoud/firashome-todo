@@ -90,7 +90,7 @@ final class NotificationManager {
     /// `Repository.toggle(...)` from `didReceive`.
     /// ponytail: ceiling = no SwiftData write from background delegate;
     /// upgrade = own ModelContainer + MainActor hop.
-    static let delegate = TaskActionDelegate()
+    private static let delegate = TaskActionDelegate()
 
     private final class TaskActionDelegate: NSObject, UNUserNotificationCenterDelegate {
         func userNotificationCenter(

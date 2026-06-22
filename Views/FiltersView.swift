@@ -16,7 +16,7 @@ struct FiltersView: View {
     /// by name. SwiftData drives the list — a new row from the "new filter"
     /// sheet shows up here as soon as `modelContext.insert` lands.
     @Query(sort: [
-        SortDescriptor(\SavedFilter.isFavorite, order: .reverse),
+        SortDescriptor(\SavedFilter.isFavorite, ascending: false),
         SortDescriptor(\SavedFilter.name)
     ])
     private var savedFilters: [SavedFilter]
