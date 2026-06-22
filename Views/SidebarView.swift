@@ -142,13 +142,17 @@ struct SidebarView: View {
     /// Renders a project row plus its children recursively. Children are
     /// indented under the parent — each level adds a small left inset — but
     /// every row is still independently tappable and drops-accepting.
-    @ViewBuilder
-    private func projectHierarchy(_ project: Project, depth: Int) -> some View {
-        projectRow(project, depth: depth)
+    /// Renders a project row plus its children recursively. Returns `AnyView`
+    /// (type-erased) because a recursive `some View` opaque return would be
+    /// "defined in terms of itself" and fail to compile.
+    private func projectHierarchy(_ project: Project, depth: Int) -> AnyView {
         let sortedChildren = project.children.sorted { $0.order < $1.order }
-        ForEach(sortedChildren) { child in
-            projectHierarchy(child, depth: depth + 1)
-        }
+        return AnyView(Group {
+            projectRow(project, depth: depth)
+            ForEach(sortedChildren) { child in
+                projectHierarchy(child, depth: depth + 1)
+            }
+        })
     }
 
     /// A project row: leading color dot + name + trailing open-task count,
