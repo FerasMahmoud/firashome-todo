@@ -209,7 +209,7 @@ final class BiometricLock: ObservableObject {
         }
     }
 
-    private static func displayName(for type: LABiometryType) -> String {
+    nonisolated private static func displayName(for type: LABiometryType) -> String {
         switch type {
         case .faceID:        return "Face ID"
         case .touchID:       return "Touch ID"
