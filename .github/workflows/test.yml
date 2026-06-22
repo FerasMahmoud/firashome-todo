@@ -50,6 +50,7 @@ jobs:
 
       - name: Build app (verify it compiles)
         run: |
+          set -o pipefail
           xcodebuild build \
             -project Todo.xcodeproj \
             -scheme Todo \
@@ -58,6 +59,7 @@ jobs:
 
       - name: Run unit tests
         run: |
+          set -o pipefail
           xcodebuild test \
             -project Todo.xcodeproj \
             -scheme Todo \

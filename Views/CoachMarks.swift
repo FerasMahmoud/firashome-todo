@@ -205,7 +205,7 @@ extension View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TK.canvas)
-        .coachMarks(isPresented: .constant(true))
+        .coachMarks(isPresented: true)
     } else {
         Text("Coach marks require iOS 17+")
     }
