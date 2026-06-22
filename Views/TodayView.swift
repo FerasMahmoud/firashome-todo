@@ -191,11 +191,15 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Date subtitle + task count — sits under the large "Today" nav title.
                 // The whole text animates as the count changes (numericText
-                // picks out the digits and tweens them).
+                // picks out the digits and tweens them). The .animation
+                // modifier supplies the active transaction so the
+                // contentTransition actually fires — without it the digits
+                // snap.
                 Text("\(dateSubtitle) · \(combined.count) tasks")
                     .font(TK.subhead)
                     .foregroundStyle(TK.secondary)
                     .contentTransition(.numericText())
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: combined.count)
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
                     .padding(.bottom, 12)

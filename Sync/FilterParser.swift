@@ -62,7 +62,23 @@ enum FilterParser {
     /// `ParsedFilter.isEmpty`.
     static func parse(_ raw: String) -> ParsedFilter {
         var filter = ParsedFilter()
-        let tokens = raw.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        var working = raw
+        // Multi-word date phrases FIRST — the tokenizer below splits on
+        // whitespace, so "no date" / "7 days" / "next 7 days" would otherwise
+        // arrive as single tokens and never match. Resolve + strip them here.
+        let lw = working.lowercased()
+        if lw.contains("no date") || lw.contains("nodate") {
+            filter.dateRange = .noDate
+            working = working.replacingOccurrences(of: "no date", with: " ", options: .caseInsensitive)
+            working = working.replacingOccurrences(of: "nodate", with: " ", options: .caseInsensitive)
+        } else if let m = working.range(of: #"(?:next\s+)?(\d+)\s+days"#,
+                                        options: [.regularExpression, .caseInsensitive]),
+                  let digits = working[m].range(of: #"\d+"#, options: .regularExpression),
+                  let n = Int(working[m][digits]), n > 0 {
+            filter.dateRange = .nextDays(n)
+            working.removeSubrange(m)
+        }
+        let tokens = working.split(whereSeparator: { $0.isWhitespace }).map(String.init)
         for token in tokens { applyToken(token, into: &filter) }
         return filter
     }

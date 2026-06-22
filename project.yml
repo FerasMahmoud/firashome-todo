@@ -104,6 +104,21 @@ targets:
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGN_IDENTITY: ""
 
+  TodoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Todo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.firashome.todo.tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+
 schemes:
   Todo:
     build:
@@ -114,6 +129,7 @@ schemes:
     test:
       config: Debug
       targets:
+        - TodoTests
         - TodoScreenshotTests
     run:
       config: Debug

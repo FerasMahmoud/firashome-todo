@@ -1,0 +1,66 @@
+name: Tests
+
+# Builds the full SwiftUI app on a macOS runner and runs the unit tests
+# (TodoTests — NLParser, FilterParser, TaskSort, recurrence). This is the
+# authority on whether the app compiles + the logic is correct on real Apple
+# toolchain. (The screenshot workflow already proves the app BUILDS; this
+# adds the test pass.)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: tests
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve an available simulator
+        id: sim
+        run: |
+          name=$(xcrun simctl list devices available -j \
+            | jq -r '.devices | to_entries[] | .value[] | select(.isAvailable and (.name | test("iPhone"))) | .name' \
+            | head -1)
+          echo "Using simulator: $name"
+          if [ -z "$name" ]; then echo "No iPhone simulator available"; exit 1; fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Homebrew (xcodegen)
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: brew-xcodegen-2026
+
+      - name: Install XcodeGen (cached)
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build app (verify it compiles)
+        run: |
+          xcodebuild build \
+            -project Todo.xcodeproj \
+            -scheme Todo \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -derivedDataPath build | xcpretty
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project Todo.xcodeproj \
+            -scheme Todo \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -only-testing:TodoTests \
+            -derivedDataPath build | xcpretty
