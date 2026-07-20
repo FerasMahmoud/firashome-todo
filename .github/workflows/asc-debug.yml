@@ -1,0 +1,35 @@
+name: ASC Debug
+on:
+  workflow_dispatch:
+jobs:
+  debug:
+    runs-on: macos-latest
+    steps:
+      - run: brew install fastlane
+      - name: List apps
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          ruby <<'RUBY'
+          require "spaceship"
+          token = Spaceship::ConnectAPI::Token.create(
+            key_id: ENV.fetch("ASC_KEY_ID"),
+            issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+            key: ENV.fetch("ASC_KEY")
+          )
+          Spaceship::ConnectAPI.token = token
+          puts "ISSUER=#{ENV['ASC_ISSUER_ID']}"
+          puts "KEY_ID=#{ENV['ASC_KEY_ID']}"
+          apps = Spaceship::ConnectAPI::App.all
+          puts "APP_COUNT=#{apps.length}"
+          apps.each { |a| puts "APP\t#{a.id}\t#{a.bundle_id}\t#{a.name}" }
+          begin
+            bids = Spaceship::ConnectAPI::BundleId.all
+            puts "BUNDLE_COUNT=#{bids.length}"
+            bids.each { |b| puts "BUNDLE\t#{b.identifier}\t#{b.name}\t#{b.id}" }
+          rescue => e
+            puts "BUNDLE_ERR=#{e.message}"
+          end
+          RUBY
