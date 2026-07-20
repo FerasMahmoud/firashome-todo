@@ -30,3 +30,13 @@ jobs:
           MATCH_KEYCHAIN_NAME: ${{ env.KC_NAME }}
           MATCH_KEYCHAIN_PASSWORD: ${{ env.KC_PASS }}
         run: fastlane beta
+      - name: Upload IPA artifact (always, even if pilot fails)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Todo-ipa
+          path: |
+            Todo.ipa
+            *.ipa
+          if-no-files-found: ignore
+          retention-days: 14
