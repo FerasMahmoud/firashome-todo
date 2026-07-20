@@ -11,7 +11,31 @@ platform :ios do
       duration: 1200
     )
 
-    # Pull App Store cert + profile from match repo (readonly on CI)
+    # Ensure App Store Connect app record exists (bundle ID already on Developer portal via match)
+    begin
+      Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
+        key_id: ENV.fetch("ASC_KEY_ID"),
+        issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+        key: ENV.fetch("ASC_KEY")
+      )
+      app = Spaceship::ConnectAPI::App.find("uk.firashome.todo")
+      if app.nil?
+        UI.message("Creating App Store Connect app uk.firashome.todo …")
+        Spaceship::ConnectAPI::App.create(
+          name: "Tasks",
+          version_string: "1.0",
+          sku: "firashome-todo",
+          primary_locale: "en-US",
+          bundle_id: "uk.firashome.todo",
+          platforms: ["IOS"]
+        )
+      else
+        UI.success("App Store Connect app already exists: #{app.name}")
+      end
+    rescue => e
+      UI.important("App ensure step: #{e.message} — continuing; pilot may still work if app exists")
+    end
+
     match(
       type: "appstore",
       app_identifier: ["uk.firashome.todo"],
@@ -19,7 +43,6 @@ platform :ios do
       api_key: api_key
     )
 
-    # Wire manual signing into the generated xcodeproj (match alone is not enough)
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "Todo.xcodeproj",
